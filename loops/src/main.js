@@ -60,12 +60,13 @@ function toast(msg, kind = '') {
   const t = el('div', { class: `toast ${kind}`, text: msg });
   $('#toasts').append(t);
   setTimeout(() => t.remove(), kind === 'badge' ? 3600 : 2600);
-  while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
+  while ($('#toasts').children.length > 2) $('#toasts').firstChild.remove();
 }
 
 function fmtTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = sec - m * 60;
+  const tenths = Math.round(sec * 10);
+  const m = Math.floor(tenths / 600);
+  const s = (tenths - m * 600) / 10;
   return `${m}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
@@ -118,8 +119,11 @@ function renderGoals() {
     }
     list.append(el('li', { class: `goal ${ok ? 'done' : ''}`, 'data-goal': c.id }, [
       el('div', { class: 'goal-ico', text: c.icon }),
-      el('div', { class: 'goal-text' }, [el('div', { class: 'goal-title', text: c.title }), el('div', { class: 'goal-desc', text: c.desc })]),
-      el('div', { class: 'goal-state', text: stateText }),
+      el('div', { class: 'goal-text' }, [
+        el('div', { class: 'goal-title', text: c.title }),
+        el('div', { class: 'goal-desc', text: c.desc }),
+        stateText ? el('div', { class: 'goal-state', text: stateText }) : null,
+      ]),
     ]));
   }
   $('#goals-count').textContent = `${done} / ${CHALLENGES.length} 個徽章`;
@@ -206,10 +210,15 @@ function renderGrid() {
     vol.addEventListener('input', () => setVolume(t.id, Number(vol.value)));
     const head = el('div', { class: 'track-head' }, [
       el('div', { class: 'track-name' }, [
-        el('span', { text: t.name }),
-        el('button', { class: 'regen', title: '重新生成這一軌', 'aria-label': `重新生成${t.name}`, text: '↻', onclick: () => regenTrack(t.id) }),
+        el('span', { class: 'tn-long', text: t.name }),
+        el('span', { class: 'tn-short', text: t.short }),
       ]),
-      el('div', { class: 'track-seed', text: `#${state.bank.trackSeeds[t.id]}` }),
+      el('button', {
+        class: 'regen',
+        title: '重新生成這一軌',
+        'aria-label': `重新生成${t.name}（目前種子 ${state.bank.trackSeeds[t.id]}）`,
+        onclick: () => regenTrack(t.id),
+      }, [el('span', { class: 'regen-ico', text: '↻' }), el('span', { class: 'track-seed', text: String(state.bank.trackSeeds[t.id]) })]),
       el('div', { class: 'ms' }, [mBtn, sBtn]),
       vol,
     ]);
@@ -392,7 +401,7 @@ function renderEditor() {
         onclick: () => { s.clips[t.id] = ci; clearOffset(s, t.id); songChanged(); },
       }));
     });
-    box.append(el('div', { class: 'ed-track', style: `--c:${t.color}` }, [el('span', { class: 'ed-label', text: t.name }), el('div', { class: 'clip-chips' }, chips)]));
+    box.append(el('div', { class: 'ed-track', style: `--c:${t.color}` }, [el('span', { class: 'ed-label', text: t.short }), el('div', { class: 'clip-chips' }, chips)]));
   }
 
   box.append(el('div', { class: 'ed-actions' }, [
@@ -594,15 +603,18 @@ function frame() {
   }
 
   // 能量條
+  // 能量 = 現在的音量（會跟著拍子跳）＋ 同時在播的軌數（疊越多越滿）
   const lvl = engine.mode === 'stopped' ? 0 : engine.level();
   const db = lvl > 0 ? 20 * Math.log10(lvl) : -100;
-  const norm = Math.max(0, Math.min(1, (db + 40) / 32));
-  energy = Math.max(norm, energy * 0.93);
+  const loud = Math.max(0, Math.min(1, (db + 36) / 30));
+  const layers = playing ? TRACK_IDS.filter((t) => pos.plan.tracks[t] && (engine.gains[t] ?? 1) > 0).length / TRACK_IDS.length : 0;
+  const target = engine.mode === 'stopped' ? 0 : 0.6 * loud + 0.4 * layers;
+  energy = Math.max(target, energy * 0.94);
   $('#energy-fill').style.width = `${(energy * 100).toFixed(1)}%`;
-  const label = engine.mode === 'stopped' ? '能量' : energy < 0.3 ? '能量：暖身中' : energy < 0.55 ? '能量：有感覺了' : energy < 0.8 ? '能量：很嗨！' : '能量：火力全開！';
+  const label = engine.mode === 'stopped' ? '能量' : energy < 0.35 ? '能量：暖身中' : energy < 0.6 ? '能量：有感覺了' : energy < 0.85 ? '能量：很嗨！' : '能量：火力全開！';
   const le = $('#energy-label');
   if (le.textContent !== label) le.textContent = label;
-  $('#energy').classList.toggle('hot', energy >= 0.8);
+  $('#energy').classList.toggle('hot', energy >= 0.85);
 
   requestAnimationFrame(frame);
 }
@@ -684,6 +696,12 @@ function loadFromObject(obj, msg) {
 
 // ───────────────────────── 分頁 ─────────────────────────
 
+function openHelp() {
+  const d = $('#help');
+  if (typeof d.showModal === 'function') d.showModal();
+  else d.setAttribute('open', '');
+}
+
 function showView(v) {
   state.view = v;
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.dataset.view === v));
@@ -719,7 +737,14 @@ function bind() {
   document.addEventListener('keydown', unlockAudio, { capture: true });
   $('#btn-play').addEventListener('click', togglePlay);
   $('#btn-rec').addEventListener('click', toggleRecord);
-  $('#btn-help').addEventListener('click', () => $('#help').showModal());
+  $('#btn-help').addEventListener('click', openHelp);
+  $('#help').addEventListener('submit', (e) => {
+    // 支援 <dialog> 的瀏覽器會自己關掉；不支援的才手動關
+    if (typeof $('#help').close !== 'function') {
+      e.preventDefault();
+      $('#help').removeAttribute('open');
+    }
+  });
   $('#btn-dice').addEventListener('click', () => generate(state.bank.genre, randomSeed()));
   $('#btn-generate').addEventListener('click', () => generate(state.bank.genre, $('#seed-input').value.trim() || randomSeed()));
   $('#seed-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(state.bank.genre, e.target.value.trim()); });
@@ -842,7 +867,7 @@ function boot() {
     generate(DEFAULT_GENRE, DEFAULT_SEED, { quiet: true });
   }
   renderGoals();
-  if (!progress) $('#help').showModal();
+  if (!progress) openHelp();
   requestAnimationFrame(frame);
 }
 

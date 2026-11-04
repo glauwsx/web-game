@@ -16,7 +16,7 @@ export const GENRES = {
     sound: {
       kit: 'lofi', bass: 'round', chords: 'ep', lead: 'flute',
       lowpass: 7200, reverb: 0.26, delay: 0.16, wow: 9, duck: 0,
-      trims: { drums: 2.4, bass: 0.5, chords: 1.08, lead: 1.32, fx: 1.6 },
+      trims: { drums: 2.4, bass: 0.36, chords: 1.08, lead: 1.32, fx: 1.6 },
     },
   },
   house: {
@@ -34,7 +34,7 @@ export const GENRES = {
     sound: {
       kit: 'house', bass: 'organ', chords: 'stab', lead: 'pluck',
       lowpass: 18000, reverb: 0.16, delay: 0.22, wow: 0, duck: 0.45,
-      trims: { drums: 1.48, bass: 0.78, chords: 1.5, lead: 3.31, fx: 1.6 },
+      trims: { drums: 1.48, bass: 0.56, chords: 1.5, lead: 3.31, fx: 1.6 },
     },
   },
   synthwave: {
@@ -52,7 +52,7 @@ export const GENRES = {
     sound: {
       kit: 'synthwave', bass: 'sawPulse', chords: 'pad', lead: 'sawLead',
       lowpass: 15000, reverb: 0.3, delay: 0.24, wow: 4, duck: 0.25,
-      trims: { drums: 1.97, bass: 0.8, chords: 1.93, lead: 2.99, fx: 1.6 },
+      trims: { drums: 1.97, bass: 0.58, chords: 1.93, lead: 2.99, fx: 1.6 },
     },
   },
   poprock: {
@@ -70,7 +70,7 @@ export const GENRES = {
     sound: {
       kit: 'rock', bass: 'pick', chords: 'piano', lead: 'square',
       lowpass: 16000, reverb: 0.18, delay: 0.12, wow: 0, duck: 0,
-      trims: { drums: 2, bass: 0.8, chords: 1.07, lead: 2.85, fx: 1.6 },
+      trims: { drums: 2, bass: 0.58, chords: 1.07, lead: 2.85, fx: 1.6 },
     },
   },
   trap: {
@@ -88,7 +88,7 @@ export const GENRES = {
     sound: {
       kit: 'trap', bass: '808', chords: 'darkpad', lead: 'bell',
       lowpass: 16000, reverb: 0.22, delay: 0.2, wow: 0, duck: 0,
-      trims: { drums: 2.19, bass: 0.39, chords: 0.88, lead: 1.86, fx: 1.6 },
+      trims: { drums: 2.19, bass: 0.28, chords: 0.88, lead: 1.86, fx: 1.6 },
     },
   },
   chip: {
@@ -106,7 +106,7 @@ export const GENRES = {
     sound: {
       kit: 'chip', bass: 'tri', chords: 'pulse', lead: 'pulse',
       lowpass: 14000, reverb: 0.1, delay: 0.16, wow: 0, duck: 0,
-      trims: { drums: 2.85, bass: 0.8, chords: 4.37, lead: 9.77, fx: 1.6 },
+      trims: { drums: 2.85, bass: 0.58, chords: 4.37, lead: 9.77, fx: 1.6 },
     },
   },
 };
@@ -114,11 +114,11 @@ export const GENRES = {
 export const GENRE_IDS = Object.keys(GENRES);
 
 export const TRACKS = [
-  { id: 'drums', name: '鼓', icon: '🥁', color: '#ff7a6b' },
-  { id: 'bass', name: '貝斯', icon: '🎸', color: '#ffb547' },
-  { id: 'chords', name: '和弦', icon: '🎹', color: '#3dd6c5' },
-  { id: 'lead', name: '主旋律', icon: '🎺', color: '#a78bfa' },
-  { id: 'fx', name: '效果音', icon: '✨', color: '#5fb4ff' },
+  { id: 'drums', name: '鼓', short: '鼓', icon: '🥁', color: '#ff7a6b' },
+  { id: 'bass', name: '貝斯', short: '貝斯', icon: '🎸', color: '#ffb547' },
+  { id: 'chords', name: '和弦', short: '和弦', icon: '🎹', color: '#3dd6c5' },
+  { id: 'lead', name: '主旋律', short: '旋律', icon: '🎺', color: '#a78bfa' },
+  { id: 'fx', name: '效果音', short: '效果', icon: '✨', color: '#5fb4ff' },
 ];
 
 export const TRACK_IDS = TRACKS.map((t) => t.id);

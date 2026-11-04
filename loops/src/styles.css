@@ -133,10 +133,17 @@ h2 { font-size: 17px; margin: 0; }
 }
 .track-name { display: flex; align-items: center; justify-content: space-between; gap: 2px; font-weight: 700; font-size: 13px; min-width: 0; }
 .track-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.regen {
-  border: none; background: none; padding: 0 2px; height: 22px; font-size: 15px; color: var(--muted); flex: none;
+.track-name .tn-long { display: none; }
+@media (min-width: 520px) {
+  .track-name .tn-long { display: inline; }
+  .track-name .tn-short { display: none; }
 }
-.track-seed { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -4px; }
+.regen {
+  display: flex; align-items: center; justify-content: center; gap: 3px; height: 30px; padding: 0 2px;
+  border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); min-width: 0;
+}
+.regen-ico { font-size: 14px; color: var(--c); }
+.track-seed { font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
 .ms { display: flex; gap: 4px; }
 .ms button {
   flex: 1; height: 30px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg);
@@ -210,19 +217,20 @@ h2 { font-size: 17px; margin: 0; }
 .section-editor .ed-empty { color: var(--muted); font-size: 14px; }
 .ed-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .ed-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.ed-label { font-size: 13px; color: var(--muted); width: 48px; flex: none; }
+.ed-label { font-size: 13px; color: var(--muted); width: 32px; flex: none; }
+.type-chip { padding: 0 9px; font-size: 13px; min-height: 36px; }
 .type-chip.on { background: var(--sc); color: #11122a; border-color: var(--sc); font-weight: 700; }
 .len-ctrl { display: flex; align-items: center; gap: 6px; }
 .len-ctrl button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); font-size: 18px; }
-.len-ctrl output { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
+.len-ctrl output { min-width: 58px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
 .quick { display: flex; gap: 4px; }
-.quick button { height: 32px; min-width: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; }
+.quick button { height: 34px; min-width: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; }
 .ed-track { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; --c: #888; }
 .ed-track .ed-label { color: var(--c); font-weight: 700; }
-.clip-chips { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.clip-chips { display: flex; gap: 3px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .clip-chips button {
-  min-width: 30px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
-  font-size: 13px; font-weight: 700; padding: 0 6px; color: var(--muted);
+  min-width: 28px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
+  font-size: 13px; font-weight: 700; padding: 0 4px; color: var(--muted); flex: 1 1 0; max-width: 40px;
 }
 .clip-chips button.on { background: var(--c); border-color: var(--c); color: #11122a; }
 .ed-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
@@ -238,7 +246,7 @@ h2 { font-size: 17px; margin: 0; }
 .goal-text { flex: 1; min-width: 0; }
 .goal-title { font-weight: 700; }
 .goal-desc { font-size: 13px; color: var(--muted); }
-.goal-state { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.goal-state { font-size: 12px; color: var(--accent); margin-top: 2px; }
 .goal.done .goal-state { color: var(--good); font-weight: 700; }
 
 /* ───────── 檔案 ───────── */

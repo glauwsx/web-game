@@ -1,0 +1,177 @@
+{
+  "date": "2026-11-04T15:03:22.582Z",
+  "passed": 34,
+  "failed": 0,
+  "results": [
+    {
+      "name": "電腦：頁面載入時 console 沒有錯誤",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "沒有從外部（CDN）載入任何東西",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "生成：曲風與種子正確",
+      "ok": true,
+      "detail": "house #4242 126 BPM"
+    },
+    {
+      "name": "生成：每軌 6–8 段",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "生成：畫面顯示種子",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "生成：格子數量 = 軌道 × 片段",
+      "ok": true,
+      "detail": "40 格"
+    },
+    {
+      "name": "生成：同一個種子在瀏覽器裡也得到一樣的結果",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "播放：五軌都在播，格子有亮起來",
+      "ok": true,
+      "detail": "5 格亮著"
+    },
+    {
+      "name": "量化：切換的片段從小節線開始、而且從片段開頭播",
+      "ok": true,
+      "detail": "點擊 2.548s → 開始 4.421s（第 3 小節）"
+    },
+    {
+      "name": "混音：靜音和獨奏生效",
+      "ok": true,
+      "detail": "{\"drums\":0,\"bass\":0,\"chords\":0,\"lead\":0.8960000000000001,\"fx\":0}"
+    },
+    {
+      "name": "錄音：演奏變成編曲段落",
+      "ok": true,
+      "detail": "2 段、3 小節"
+    },
+    {
+      "name": "編曲：用介面排出三個段落",
+      "ok": true,
+      "detail": "intro×4 → verse×4 → chorus×4"
+    },
+    {
+      "name": "編曲：可以從任一段開始播",
+      "ok": true,
+      "detail": "從第 5 小節（第 2 段）開始"
+    },
+    {
+      "name": "WAV：取樣率 44.1 kHz、立體聲、16-bit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "WAV：長度 = 小節數 × 每小節秒數 + 2 秒餘韻",
+      "ok": true,
+      "detail": "12 小節 × 1.9048 秒 + 2 秒 = 24.857 秒；檔案 24.857 秒（1096200 / 1096200 個取樣點）"
+    },
+    {
+      "name": "WAV：峰值低於 0 dBFS（沒有破音）",
+      "ok": true,
+      "detail": "峰值 -1.53 dBFS"
+    },
+    {
+      "name": "WAV：不是靜音",
+      "ok": true,
+      "detail": "RMS -11.9 dBFS"
+    },
+    {
+      "name": "WAV：沒有任何取樣點碰到滿格",
+      "ok": true,
+      "detail": "0 個"
+    },
+    {
+      "name": "WAV：每一段都有聲音",
+      "ok": true,
+      "detail": "-13.2 dB / -11.5 dB / -10.5 dB"
+    },
+    {
+      "name": "匯出：畫面顯示結果",
+      "ok": true,
+      "detail": "完成：我的歌.wav・長度 0:24.9・峰值 -1.5 dBFS・4.2 MB（花了 13.4 秒）"
+    },
+    {
+      "name": "分軌：drums 有發出聲音",
+      "ok": true,
+      "detail": "RMS -14.7 dBFS、峰值 -1.6 dBFS"
+    },
+    {
+      "name": "分軌：bass 有發出聲音",
+      "ok": true,
+      "detail": "RMS -14.1 dBFS、峰值 -2.6 dBFS"
+    },
+    {
+      "name": "分軌：chords 有發出聲音",
+      "ok": true,
+      "detail": "RMS -15.5 dBFS、峰值 -1.9 dBFS"
+    },
+    {
+      "name": "分軌：lead 有發出聲音",
+      "ok": true,
+      "detail": "RMS -19.0 dBFS、峰值 -1.7 dBFS"
+    },
+    {
+      "name": "分軌：fx 有發出聲音",
+      "ok": true,
+      "detail": "RMS -27.6 dBFS、峰值 -2.1 dBFS"
+    },
+    {
+      "name": "存檔：專案 JSON 可以完整讀回",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "存檔：存到瀏覽器再讀回來",
+      "ok": true,
+      "detail": "3 段"
+    },
+    {
+      "name": "挑戰：有解鎖徽章",
+      "ok": true,
+      "detail": "first-loop, groove, full-band, mixer, export"
+    },
+    {
+      "name": "電腦：整個流程 console 沒有錯誤",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "手機：頁面載入時 console 沒有錯誤",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "手機：沒有橫向捲動",
+      "ok": true,
+      "detail": "多出 0px"
+    },
+    {
+      "name": "手機：按鈕夠大好點",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "手機：每個畫面都沒有橫向捲動",
+      "ok": true,
+      "detail": "多出 0px"
+    },
+    {
+      "name": "手機：整個流程 console 沒有錯誤",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

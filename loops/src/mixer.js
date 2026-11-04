@@ -92,7 +92,7 @@ export function buildGraph(ctx, { raw = false } = {}) {
   comp.attack.value = 0.015;
   comp.release.value = 0.22;
   const makeup = ctx.createGain();
-  makeup.gain.value = 1.35;
+  makeup.gain.value = 1.2;
 
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -5;
