@@ -68,6 +68,8 @@ h2 { font-size: 17px; margin: 0; }
 .tbtn svg { width: 22px; height: 22px; fill: currentColor; }
 .tbtn.play { width: 52px; background: linear-gradient(180deg, #3e46b8, #2b2f86); border-color: #4c55d8; }
 .tbtn.play .ico-stop { display: none; }
+.tbtn.play.attention { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(76, 85, 216, 0.35), 0 0 18px rgba(76, 85, 216, 0.6); } }
 .app.playing .tbtn.play .ico-play { display: none; }
 .app.playing .tbtn.play .ico-stop { display: block; }
 .tbtn.rec { padding: 0 12px; font-size: 14px; }
@@ -336,5 +338,5 @@ h2 { font-size: 17px; margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cell.queued, .cell.stopping, .tbtn.rec.armed { animation: none; }
+  .cell.queued, .cell.stopping, .tbtn.rec.armed, .tbtn.play.attention { animation: none; }
 }

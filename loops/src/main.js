@@ -732,29 +732,31 @@ function showView(v) {
 
 // ───────────────────────── iOS 靜音開關 ─────────────────────────
 
-let iosUnlocked = false;
+let silentAudio = null;
+let silentPlaying = false;
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// 每次觸控／點擊都試著解鎖音訊，直到真的在播為止（iOS 只認某些手勢）
 function unlockAudio() {
   engine.init();
-  if (iosUnlocked) return;
-  iosUnlocked = true;
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!isIOS) return;
+  if (!IS_IOS || silentPlaying) return;
   try {
-    // 播一段無聲的音訊，讓 iOS 把聲音當成「媒體播放」，靜音開關打開時也聽得到
-    const silent = encodeWav([new Float32Array(4410)], 44100);
-    const a = new Audio(URL.createObjectURL(new Blob([silent], { type: 'audio/wav' })));
-    a.loop = true;
-    a.setAttribute('playsinline', '');
-    a.volume = 0.01;
-    a.play().catch(() => {});
+    if (!silentAudio) {
+      // 播一段無聲的音訊，讓 iOS 把聲音當成「媒體播放」，靜音開關打開時也聽得到
+      const silent = encodeWav([new Float32Array(4410)], 44100);
+      silentAudio = new Audio(URL.createObjectURL(new Blob([silent], { type: 'audio/wav' })));
+      silentAudio.loop = true;
+      silentAudio.setAttribute('playsinline', '');
+      silentAudio.volume = 0.01;
+    }
+    silentAudio.play().then(() => { silentPlaying = true; }).catch(() => {});
   } catch (e) { /* ignore */ }
 }
 
 // ───────────────────────── 啟動 ─────────────────────────
 
 function bind() {
-  document.addEventListener('pointerdown', unlockAudio, { capture: true });
-  document.addEventListener('keydown', unlockAudio, { capture: true });
+  for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
   $('#btn-play').addEventListener('click', togglePlay);
   $('#btn-rec').addEventListener('click', toggleRecord);
   $('#btn-help').addEventListener('click', openHelp);
@@ -838,7 +840,7 @@ function bind() {
     if (e.key === 'r' || e.key === 'R') toggleRecord();
   });
 
-  engine.on('mode', () => { setPlayingUI(); updateRecButton(); });
+  engine.on('mode', () => { setPlayingUI(); updateRecButton(); $('#btn-play').classList.remove('attention'); });
   engine.on('launch', (list) => {
     state.stats.launches += list.length;
     setTimeout(checkGoals, 250);
@@ -892,6 +894,7 @@ function boot() {
   }
   renderGoals();
   if (!progress) openHelp();
+  if (!state.stats.launches) $('#btn-play').classList.add('attention');
   requestAnimationFrame(frame);
 }
 

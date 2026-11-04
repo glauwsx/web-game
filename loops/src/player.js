@@ -23,8 +23,17 @@ export function harmonyRoot(bank, plan, step) {
   return normRoot(prog[mod(plan.harmonyBar, prog.length)]);
 }
 
+// 各軌的合理音域（MIDI）。超出就移八度，音名不變，所以仍在調內。
+const RANGE = { bass: [28, 60], lead: [55, 93], fx: [55, 100], chords: [45, 88] };
+
 export function pitchFor(bank, track, rel, oct, root) {
-  return trackBase(track, bank.key.tonic) + degToSemis(root + rel + 7 * (oct || 0), bank.key.mode);
+  let m = trackBase(track, bank.key.tonic) + degToSemis(root + rel + 7 * (oct || 0), bank.key.mode);
+  const r = RANGE[track];
+  if (r) {
+    while (m < r[0]) m += 12;
+    while (m > r[1]) m -= 12;
+  }
+  return m;
 }
 
 export function chordPitches(bank, clip, root) {

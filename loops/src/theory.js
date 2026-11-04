@@ -113,7 +113,7 @@ export function keyLabel(key) {
 export function trackBase(track, tonic) {
   switch (track) {
     case 'bass':
-      return tonic <= 6 ? 36 + tonic : 24 + tonic; // C2..F#2 / G1..B1
+      return tonic <= 8 ? 36 + tonic : 24 + tonic; // C2..A♭2 / A1..B1：最低的根音不會低於 E1
     case 'chords':
       return 48 + tonic;
     case 'lead':

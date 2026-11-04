@@ -52,6 +52,7 @@ test('所有曲風、所有種子：生成的音都在調內（任何片段組�
             checked++;
             assert.ok(pcs.has(mod(m, 12)), `${genre}/${seed} ${ev.track} 的音 ${m} 不在 ${JSON.stringify(bank.key)} 裡`);
             assert.ok(m >= 20 && m <= 110, `${ev.track} 的音 ${m} 超出合理音域`);
+            if (ev.track === 'bass') assert.ok(m >= 28 && m <= 60, `貝斯的音 ${m} 太低或太高`);
           }
         }
       }
