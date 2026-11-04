@@ -7,11 +7,11 @@ import { Rng } from './rng.js';
 
 // 各軌送往殘響、延遲的量，以及各軌的高通（清掉低頻，避免混濁）
 const TRACK_SETUP = {
-  drums: { rev: 0.1, dly: 0, hp: 0, trim: 1.0, pan: 0, duck: false },
+  drums: { rev: 0.14, dly: 0, hp: 0, trim: 1.0, pan: 0, duck: false },
   bass: { rev: 0, dly: 0, hp: 0, trim: 1.0, pan: 0, duck: true },
-  chords: { rev: 0.45, dly: 0.1, hp: 140, trim: 1.0, pan: 0, duck: true },
-  lead: { rev: 0.4, dly: 0.45, hp: 180, trim: 1.0, pan: 0.05, duck: true },
-  fx: { rev: 0.55, dly: 0.4, hp: 120, trim: 1.0, pan: -0.08, duck: false },
+  chords: { rev: 0.32, dly: 0.1, hp: 140, trim: 1.0, pan: 0, duck: true },
+  lead: { rev: 0.3, dly: 0.45, hp: 180, trim: 1.0, pan: 0.05, duck: true },
+  fx: { rev: 0.45, dly: 0.4, hp: 120, trim: 1.0, pan: -0.08, duck: false },
 };
 
 export const SOFT_CLIP_CEILING = 0.86;
@@ -92,7 +92,7 @@ export function buildGraph(ctx, { raw = false } = {}) {
   comp.attack.value = 0.015;
   comp.release.value = 0.22;
   const makeup = ctx.createGain();
-  makeup.gain.value = 1.35;
+  makeup.gain.value = 1.2;
 
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -5;
@@ -214,7 +214,7 @@ export function buildGraph(ctx, { raw = false } = {}) {
     out,
     setGenre(sound, bpm) {
       setParam(ctx, color.frequency, sound.lowpass || 18000, 0.1);
-      setParam(ctx, revOut.gain, 0.35 + (sound.reverb || 0.2) * 1.6, 0.1);
+      setParam(ctx, revOut.gain, 2 * (0.35 + (sound.reverb || 0.2) * 1.6), 0.1);
       setParam(ctx, dlyOut.gain, (sound.delay || 0.15) * 1.5, 0.1);
       setParam(ctx, dly.delayTime, Math.min(2.4, (60 / bpm) * 0.75), 0.05);
       setParam(ctx, wow.gain, sound.wow || 0, 0.1);

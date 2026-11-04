@@ -43,6 +43,11 @@ export class App {
     window.addEventListener('keydown', unlock);
     this.input.on((type) => { if (type === 'activity') unlock(); });
 
+    // 切到別的分頁時自動暫停
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.game && !this.demo && !this.paused && !this.screen && this.timeScale <= 1) this.pause();
+    });
+
     this.startDemo();
     this.go('title');
     this.exposeDebug();
@@ -106,9 +111,11 @@ export class App {
       this.screensEl.appendChild(this.screen.el);
     }
     this.hud.show(!!this.game && !this.demo && !['title', 'menu', 'teams', 'controllers', 'settings'].includes(name));
+    document.body.classList.toggle('menu-open', !!this.screen);
   }
 
   closeScreens() {
+    document.body.classList.remove('menu-open');
     this.screensEl.innerHTML = '';
     this.screen = null;
     this.screenName = '';
@@ -268,6 +275,7 @@ export class App {
     // 比賽階段對應的畫面
     if (g && !this.demo) {
       if (g.phase === 'periodBreak' && !this.screen && !this.paused) this.go('break');
+      if (this.screenName === 'break' && g.phase !== 'periodBreak') this.closeScreens();
       if (g.phase === 'gameOver' && this.screenName !== 'results' && !this.paused) {
         this.gameOverTimer = (this.gameOverTimer || 0) + dt;
         if (this.gameOverTimer > 1.2) { this.gameOverTimer = 0; this.go('results'); this.audio.setCrowd(0.25); }
@@ -342,6 +350,44 @@ export class App {
       addStepHook(fn) { app.stepHooks.push(fn); },
       clearStepHooks() { app.stepHooks.length = 0; },
       screen() { return app.screenName; },
+      // 把球交給某位玩家控制的球員（測試輸入用）
+      giveBallToHuman(label = '1P') {
+        const g = app.game;
+        const h = g.humans.find((x) => x.label === label);
+        if (!h || !h.player) return null;
+        const p = h.player;
+        g.setPhase('live');
+        g.ball.shot = null; g.ball.pass = null;
+        g.ball.release('loose');
+        g.ball.pos = { x: p.pos.x, y: 1, z: p.pos.z };
+        g.gainBall(p, 'debug');
+        return p.name;
+      },
+      // 讓對手持球並站在玩家球員面前（測試抄截用）
+      giveBallToOpponent(label = '1P') {
+        const g = app.game;
+        const h = g.humans.find((x) => x.label === label);
+        if (!h || !h.player) return null;
+        const me = h.player;
+        const opp = g.onCourt(1 - me.team)[0];
+        g.setPhase('live');
+        g.ball.shot = null; g.ball.pass = null;
+        opp.pos.x = me.pos.x + Math.cos(me.facing) * 0.75;
+        opp.pos.z = me.pos.z + Math.sin(me.facing) * 0.75;
+        opp.action = null;
+        g.ball.release('loose');
+        g.ball.pos = { x: opp.pos.x, y: 1, z: opp.pos.z };
+        g.gainBall(opp, 'debug');
+        if (me.human) me.facing = Math.atan2(opp.pos.z - me.pos.z, opp.pos.x - me.pos.x);
+        return opp.name;
+      },
+      humanPlayer(label = '1P') {
+        const g = app.game;
+        const h = g && g.humans.find((x) => x.label === label);
+        if (!h || !h.player) return null;
+        const p = h.player;
+        return { name: p.name, x: p.pos.x, z: p.pos.z, team: p.team, hasBall: g.ball.holder === p, action: p.action ? p.action.type : null, fga: p.stats.fga, stealCooldown: p.stealCooldown, device: h.id };
+      },
       go(n) { app.go(n); },
       continueBreak() { app.continueBreak(); },
       errors: app.errors,

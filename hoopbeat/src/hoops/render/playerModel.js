@@ -204,26 +204,27 @@ export class PlayerModel {
     const stance = an.stance;
 
     // 預設：跑步循環
-    let hipL = s * 0.85 * run, hipR = -s * 0.85 * run;
-    let kneeL = -(0.15 + 0.95 * Math.max(0, -c)) * run - 0.05;
-    let kneeR = -(0.15 + 0.95 * Math.max(0, c)) * run - 0.05;
-    let lean = an.lean * 0.35 + run * 0.1;
-    let shL = -hipL * 0.75, shR = -hipR * 0.75;
-    let elL = 0.4 + run * 0.9, elR = 0.4 + run * 0.9;
-    let abL = 0.1, abR = 0.1;
+    const amp = 0.58 * run;
+    let hipL = s * amp + 0.08 * run, hipR = -s * amp + 0.08 * run;
+    let kneeL = -(0.12 + 1.05 * Math.max(0, -c)) * run - 0.06;
+    let kneeR = -(0.12 + 1.05 * Math.max(0, c)) * run - 0.06;
+    let lean = an.lean * 0.3 + run * 0.08;
+    let shL = -s * amp * 0.9, shR = s * amp * 0.9;
+    let elL = 0.35 + run * 1.0, elR = 0.35 + run * 1.0;
+    let abL = 0.08, abR = 0.08;
     let headTilt = 0;
     let bob = Math.abs(Math.sin(ph)) * 0.05 * run;
 
     // 防守姿勢
     if (stance > 0.01) {
       const k = stance;
-      hipL = lerp(hipL, 0.65 + s * 0.15 * run, k);
-      hipR = lerp(hipR, 0.65 - s * 0.15 * run, k);
-      kneeL = lerp(kneeL, -1.15, k); kneeR = lerp(kneeR, -1.15, k);
-      lean = lerp(lean, 0.42, k);
-      shL = lerp(shL, 0.35, k); shR = lerp(shR, 0.35, k);
-      abL = lerp(abL, 0.95, k); abR = lerp(abR, 0.95, k);
-      elL = lerp(elL, 0.5, k); elR = lerp(elR, 0.5, k);
+      hipL = lerp(hipL, 0.48 + s * 0.12 * run, k);
+      hipR = lerp(hipR, 0.48 - s * 0.12 * run, k);
+      kneeL = lerp(kneeL, -0.9, k); kneeR = lerp(kneeR, -0.9, k);
+      lean = lerp(lean, 0.32, k);
+      shL = lerp(shL, 0.7, k); shR = lerp(shR, 0.7, k);
+      abL = lerp(abL, 0.55, k); abR = lerp(abR, 0.55, k);
+      elL = lerp(elL, 0.75, k); elR = lerp(elR, 0.75, k);
     }
 
     // 持球運球
