@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11122a">
+<meta name="description" content="Loop 工坊：用程式生成的音樂片段疊出你的歌。">
+<title>Loop 工坊</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2311122a'/%3E%3Crect x='10' y='12' width='12' height='12' rx='3' fill='%23ff7a6b'/%3E%3Crect x='26' y='12' width='12' height='12' rx='3' fill='%23ffb547'/%3E%3Crect x='42' y='12' width='12' height='12' rx='3' fill='%233dd6c5'/%3E%3Crect x='10' y='28' width='12' height='12' rx='3' fill='%23a78bfa'/%3E%3Crect x='26' y='28' width='12' height='12' rx='3' fill='%235fb4ff'/%3E%3Crect x='10' y='44' width='44' height='8' rx='4' fill='%23ffffff' opacity='.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+<div id="app" class="app">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Loop 工坊</span></div>
+      <div class="meta" id="meta"><span id="meta-bpm">— BPM</span><span id="meta-key">—</span></div>
+      <button class="icon-btn" id="btn-help" aria-label="怎麼玩">?</button>
+    </div>
+    <div class="top-row transport-row">
+      <button class="tbtn play" id="btn-play" aria-label="播放">
+        <svg viewBox="0 0 24 24" class="ico-play"><path d="M7 4.5v15l13-7.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="ico-stop"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+      <button class="tbtn rec" id="btn-rec" aria-label="錄下我的演奏"><span class="rec-dot"></span><span class="rec-label">錄音</span></button>
+      <div class="pos" id="pos">
+        <div class="pos-main" id="pos-main">已停止</div>
+        <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="energy" id="energy" title="能量：音樂越熱鬧越滿">
+        <div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div>
+        <div class="energy-label" id="energy-label">能量</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="views">
+    <section class="view view-loop active" data-view="loop" aria-label="Loop 台">
+      <div class="panel gen-panel">
+        <div class="genre-chips" id="genre-chips" role="radiogroup" aria-label="曲風"></div>
+        <div class="seed-row">
+          <label class="seed-field">種子
+            <input id="seed-input" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="種子">
+          </label>
+          <button class="btn ghost" id="btn-dice" aria-label="隨機換一個種子">🎲</button>
+          <button class="btn primary" id="btn-generate">生成新片段</button>
+        </div>
+      </div>
+      <div class="grid-wrap">
+        <div class="grid" id="grid"></div>
+      </div>
+      <div class="loop-actions">
+        <button class="btn" id="btn-stop-all">全部停止</button>
+        <button class="btn" id="btn-add-current">＋ 把現在的組合加成段落</button>
+      </div>
+      <p class="hint" id="loop-hint">點片段排入佇列，會在下一個小節線開始播。再點一次「■」停止那一軌。</p>
+    </section>
+
+    <section class="view view-song" data-view="song" aria-label="編曲">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>組成一首歌</h2>
+          <span class="muted" id="song-total">0 小節</span>
+        </div>
+        <div class="song-controls">
+          <button class="btn primary" id="btn-song-play">▶ 播放整首</button>
+          <button class="btn" id="btn-song-from">▶ 從選取的段落</button>
+          <button class="btn" id="btn-auto">一鍵排歌</button>
+        </div>
+        <div class="timeline-wrap">
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <div class="add-row">
+          <span class="muted">新增段落：</span>
+          <div class="add-chips" id="add-chips"></div>
+        </div>
+      </div>
+      <div class="panel section-editor" id="section-editor"></div>
+    </section>
+
+    <section class="view view-goals" data-view="goals" aria-label="挑戰">
+      <div class="panel">
+        <div class="panel-head"><h2>挑戰</h2><span class="muted" id="goals-count"></span></div>
+        <ul class="goals" id="goals"></ul>
+      </div>
+    </section>
+
+    <section class="view view-files" data-view="files" aria-label="匯出與存檔">
+      <div class="panel">
+        <div class="panel-head"><h2>匯出 WAV</h2></div>
+        <div class="export-row">
+          <button class="btn primary" id="btn-export">匯出整首歌</button>
+          <label class="check"><input type="checkbox" id="chk-tail" checked> 結尾加 2 秒餘韻</label>
+        </div>
+        <div class="progress" id="export-progress" hidden><div class="progress-fill" id="export-fill"></div></div>
+        <p class="muted small" id="export-result">會用離線方式把整首歌算成 44.1 kHz、16-bit 立體聲 WAV。</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>專案</h2></div>
+        <label class="field">歌名 <input id="project-name" maxlength="60" value="我的歌"></label>
+        <div class="file-grid">
+          <button class="btn" id="btn-save-local">存到瀏覽器</button>
+          <button class="btn" id="btn-load-local">從瀏覽器讀取</button>
+          <button class="btn" id="btn-save-file">下載專案檔</button>
+          <button class="btn" id="btn-load-file">開啟專案檔</button>
+          <button class="btn" id="btn-demo">載入示範歌</button>
+          <button class="btn danger" id="btn-clear-song">清空編曲</button>
+        </div>
+        <input type="file" id="file-input" accept=".json,application/json" hidden>
+        <p class="muted small" id="save-info">每次修改都會自動暫存，重新整理頁面也不會不見。</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="切換畫面">
+    <button class="tab active" data-tab="loop"><span class="tab-ico">🎛️</span><span>Loop</span></button>
+    <button class="tab" data-tab="song"><span class="tab-ico">🎼</span><span>編曲</span></button>
+    <button class="tab" data-tab="goals"><span class="tab-ico">🏅</span><span>挑戰</span><b class="tab-badge" id="tab-badge" hidden></b></button>
+    <button class="tab" data-tab="files"><span class="tab-ico">💾</span><span>檔案</span></button>
+  </nav>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <dialog class="help" id="help">
+    <form method="dialog">
+      <h2>怎麼玩</h2>
+      <ol>
+        <li><b>選曲風、按「生成新片段」。</b>五軌各生成 8 段，全部同速度、同調。</li>
+        <li><b>點格子裡的片段。</b>它會在下一個小節線開始播。每軌同時只播一段。</li>
+        <li><b>疊出你喜歡的組合。</b>用 M（靜音）、S（獨奏）和音量條調整。</li>
+        <li><b>按「錄音」</b>，切換片段的過程會變成編曲裡的段落。</li>
+        <li><b>到「編曲」排段落</b>：前奏、主歌、副歌、橋段、結尾。</li>
+        <li><b>到「檔案」匯出 WAV</b>，或存成專案檔。</li>
+      </ol>
+      <p class="muted small">手機請先關掉靜音模式，聲音才會出來。</p>
+      <button class="btn primary" value="close">開始玩</button>
+    </form>
+  </dialog>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

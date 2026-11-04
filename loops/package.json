@@ -1,0 +1,11 @@
+{
+  "name": "loops-workshop",
+  "private": true,
+  "type": "module",
+  "description": "Loop 工坊：網頁音樂遊戲（純靜態，不需要打包）",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.js",
+    "e2e": "node tests/e2e.mjs",
+    "serve": "node tests/serve.mjs"
+  }
+}
