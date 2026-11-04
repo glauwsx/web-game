@@ -10,7 +10,10 @@ import { computeFeatures } from './features.js';
 export const PHRASE_BARS = 4;
 export const MORALE_SECONDS = 8;
 
-const keyOf = (clips) => TRACK_IDS.map((t) => (clips[t] === null || clips[t] === undefined ? '-' : clips[t])).join(',');
+export const MIN_BPM = 70;
+export const MAX_BPM = 180;
+
+const keyOf = (clips, bpm) => TRACK_IDS.map((t) => (clips[t] === null || clips[t] === undefined ? '-' : clips[t])).join(',') + `@${bpm}`;
 
 export class Deck {
   constructor({ id, name, bank, song, bpm, mixer = {} }) {
@@ -19,6 +22,8 @@ export class Deck {
     this.bank = bank;
     this.song = song;
     this.bpm = bpm ?? bank.bpm;
+    this.baseBpm = this.bpm; // 賽前選的速度
+    this.tactic = null; // 目前的戰術配樂
     this.mixer = mixer;
     this.songBar = 0; // 在歌裡的位置（小節）
     this.barsPlayed = 0; // 這台實際播了幾個小節（沒在播的時候不前進）
@@ -69,10 +74,8 @@ export class Deck {
     let bar = this.songBar;
     let ov = this.overrides;
     if (p) {
-      if (p.section !== undefined) {
-        bar = sectionStartBar(this.song, p.section);
-        ov = {};
-      }
+      if (p.section !== undefined) bar = sectionStartBar(this.song, p.section);
+      if (p.replace) ov = {};
       ov = { ...ov, ...p.overrides };
     }
     return this.clipsFor(bar, ov);
@@ -91,7 +94,6 @@ export class Deck {
     const p = this.ensurePending();
     const from = p.section ?? this.sectionIndex;
     p.section = mod(from + dir, n);
-    p.overrides = {};
     this.applyIfIdle();
   }
 
@@ -101,6 +103,38 @@ export class Deck {
     const cur = up[track];
     const next = cur === null || cur === undefined ? (dir > 0 ? 0 : n - 1) : mod(cur + dir, n);
     this.ensurePending().overrides[track] = next;
+    this.applyIfIdle();
+  }
+
+  // 改速度（下一個小節線生效）
+  setBpm(bpm) {
+    const v = Math.round(Math.max(MIN_BPM, Math.min(MAX_BPM, bpm)));
+    this.ensurePending().bpm = v;
+    this.applyIfIdle();
+  }
+
+  upcomingBpm() {
+    return this.pending?.bpm ?? this.bpm;
+  }
+
+  // 一次改好幾軌（戰術配樂用）
+  setClips(clips, { bpm = null, tactic = null } = {}) {
+    const p = this.ensurePending();
+    p.replace = true; // 換戰術：先清掉上一個戰術的切換
+    p.overrides = {};
+    for (const [t, v] of Object.entries(clips)) p.overrides[t] = v;
+    if (bpm !== null) p.bpm = Math.round(Math.max(MIN_BPM, Math.min(MAX_BPM, bpm)));
+    p.tactic = tactic;
+    this.applyIfIdle();
+  }
+
+  // 回到原曲：取消所有現場切換、速度回到賽前設定
+  resetLive() {
+    const p = this.ensurePending();
+    p.overrides = {};
+    p.bpm = this.baseBpm;
+    p.tactic = null;
+    p.replace = true;
     this.applyIfIdle();
   }
 
@@ -129,7 +163,7 @@ export class Deck {
   applyIfIdle() {
     if (this.playing) return;
     this.applyPending();
-    const key = keyOf(this.currentClips());
+    const key = keyOf(this.currentClips(), this.bpm);
     if (key !== this.lastKey && this.lastKey !== null) {
       this.lastChangeBar = this.barsPlayed;
       this.changes += 1;
@@ -140,11 +174,12 @@ export class Deck {
   applyPending() {
     const p = this.pending;
     if (!p) return;
-    if (p.section !== undefined) {
-      this.songBar = sectionStartBar(this.song, p.section);
-      this.overrides = {};
-    }
+    if (p.section !== undefined) this.songBar = sectionStartBar(this.song, p.section);
+    if (p.replace) this.overrides = {};
     this.overrides = { ...this.overrides, ...p.overrides };
+    if (p.bpm !== undefined) this.bpm = p.bpm;
+    if ('tactic' in p) this.tactic = p.tactic;
+    else if (Object.keys(p.overrides).length) this.tactic = null;
     this.pending = null;
   }
 
@@ -153,7 +188,7 @@ export class Deck {
     this.applyPending();
     const loc = this.sectionAt();
     const clips = this.currentClips();
-    const key = keyOf(clips);
+    const key = keyOf(clips, this.bpm);
     let changed = false;
     let boosted = false;
     if (this.lastKey !== null && key !== this.lastKey) {
