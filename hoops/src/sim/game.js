@@ -574,8 +574,10 @@ export class Game {
       a.gather = kind === 'ft' ? 0.22 : 0.13;
       a.jumpV = kind === 'ft' ? 0 : p.jumpVelocity('shot');
       a.ideal = kind === 'ft' ? 0.55 : a.gather + 0.92 * a.jumpV / GRAVITY;
+      const r01h = shotRating01(p, kind, points, d);
+      a.perfectWin = 0.03 * (0.8 + 0.5 * r01h) * (p.human ? this.diff.humanWindow : 1);
       if (!a.humanHold) {
-        const r01 = shotRating01(p, kind, points, d);
+        const r01 = r01h;
         const sigma = (p.human ? 0.04 : this.diff.timingSigma) * (1.25 - 0.5 * r01);
         a.releaseAt = Math.max(a.gather * 0.5, a.ideal + this.rng.gauss(0, sigma));
       }
@@ -1084,7 +1086,7 @@ export class Game {
       }
       return;
     }
-    if (a && (a.type === 'inbound' || this.phase === 'freethrow' || this.phase === 'inbound')) {
+    if ((a && a.type === 'inbound') || this.phase === 'freethrow' || this.phase === 'inbound') {
       b.pos.x = p.pos.x + fx * 0.32;
       b.pos.z = p.pos.z + fz * 0.32;
       b.pos.y = p.y + p.height * 0.62;
@@ -1456,7 +1458,8 @@ export class Game {
     if (r.period >= r.periods && r.gameClock <= 120) r.clockRunning = false;
     const other = 1 - team;
     const spot = this.baselineSpot(side);
-    const mates = this.onCourt(other);
+    const allMates = this.onCourt(other);
+    const mates = allMates.filter((p) => !p.human).length ? allMates.filter((p) => !p.human) : allMates;
     const inbounder = mates.reduce((a, p) => (dist2(p.pos.x, p.pos.z, spot.x, spot.z) - (p.role >= 3 ? 2 : 0) < dist2(a.pos.x, a.pos.z, spot.x, spot.z) - (a.role >= 3 ? 2 : 0) ? p : a));
     for (const p of this.everyoneOnCourt()) if (p.action && p.action.type !== 'shot' && p.action.type !== 'land') p.action = null;
     this.setPhase('afterScore', { team: other, spot, inbounder, side });

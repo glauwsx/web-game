@@ -168,8 +168,7 @@ export class HUD {
       const tMax = a.ideal * 1.6;
       const frac = Math.min(1, (a.released ? a.releaseT : a.t) / tMax);
       this.meterFill.style.height = `${frac * 100}%`;
-      const r01 = 0.75;
-      const win = 0.03 * (0.8 + 0.5 * r01) * game.diff.humanWindow;
+      const win = a.perfectWin || 0.035;
       const zc = a.ideal / tMax, zh = (win * 2) / tMax;
       this.meterZone.style.bottom = `${(zc - zh / 2) * 100}%`;
       this.meterZone.style.height = `${Math.max(4, zh * 96)}px`;
@@ -207,7 +206,8 @@ export class HUD {
       }
       if (game.phase === 'tipoff' && game.pd.jumpers && game.pd.jumpers.includes(p) && !game.pd.jumped[p.team]) {
         const q = renderer.project(p.pos.x, p.height * 1.45, p.pos.z);
-        html += `<div class="marker" style="left:${q.x}px;top:${q.y}px"><span class="hint-box">球往下掉時按 ${glyph(type, 'block')} 跳球</span></div>`;
+        const dx = p.pos.x < 0 ? -110 : 110;
+        html += `<div class="marker" style="left:${q.x + dx}px;top:${q.y}px"><span class="hint-box">${h.label} 球往下掉時按 ${glyph(type, 'block')} 跳球</span></div>`;
       }
     }
     if (this.cache.markers !== html) { this.cache.markers = html; this.markers.innerHTML = html; }
