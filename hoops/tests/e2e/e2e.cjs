@@ -60,10 +60,18 @@ async function newPage(browser, port, viewport = { width: 1280, height: 720 }) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function tapPad(page, i, b, hold = 320, after = 300) {
+// 按下按鈕：一直按住到遊戲的輸入系統真的讀到，再放開並等它讀到放開。
+// 這樣不管畫面多慢（軟體繪圖可能一幀 400 毫秒），每次都剛好是一次按鍵。
+async function tapPad(page, i, b, hold = 60, after = 120) {
+  const seen = (want) => page.evaluate(([i, b, want]) => {
+    const s = window.__hoops.app.input.padState.get('pad' + i);
+    return !!s && !!s.buttons[b] === want;
+  }, [i, b, want]);
   await page.evaluate(([i, b]) => window.__pad.button(i, b, true), [i, b]);
   await sleep(hold);
+  for (let k = 0; k < 60 && !(await seen(true)); k++) await sleep(40);
   await page.evaluate(([i, b]) => window.__pad.button(i, b, false), [i, b]);
+  for (let k = 0; k < 60 && !(await seen(false)); k++) await sleep(40);
   await sleep(after);
 }
 
@@ -108,7 +116,9 @@ async function testGamepad(browser, port) {
   await tapPad(page, 0, 13); await tapPad(page, 0, 13);
   const okCtrl = await tapUntil(page, 0, 0, 'controllers');
   // 鍵盤移到電腦欄，Xbox 到主隊，PS 到客隊
-  await page.keyboard.down('ArrowRight'); await sleep(320); await page.keyboard.up('ArrowRight'); await sleep(300);
+  await page.keyboard.down('ArrowRight');
+  for (let k = 0; k < 60 && (await page.evaluate(() => window.__hoops.app.assign.get('kb'))) !== 0; k++) await sleep(40);
+  await page.keyboard.up('ArrowRight'); await sleep(200);
   await tapPad(page, 0, 14);
   await tapPad(page, 1, 15);
   const assign = await page.evaluate(() => Object.fromEntries(window.__hoops.app.assign));
@@ -162,7 +172,7 @@ async function testGamepad(browser, port) {
   await sleep(150);
   const fga0 = await page.evaluate(() => window.__hoops.humanPlayer('1P').fga);
   await page.evaluate(() => { window.__ev.length = 0; });
-  await tapPad(page, 0, 2, 380, 900);
+  await tapPad(page, 0, 2, 380, 900); // 按住約 0.38 秒
   const shot = await page.evaluate((n) => window.__ev.filter((e) => e.type === 'shot' && e.player === n).length, shooter);
   const fga1 = await page.evaluate(() => window.__hoops.humanPlayer('1P').fga);
   const meterSeen = await page.evaluate(() => window.__ev.some((e) => e.type === 'shotStart'));
@@ -283,7 +293,9 @@ async function testShots(browser, port) {
   shots.push(await snap('02-team-select.png'));
   await tapPad(page, 0, 13); await tapPad(page, 0, 13);
   await tapUntil(page, 0, 0, 'controllers');
-  await page.keyboard.down('ArrowRight'); await sleep(320); await page.keyboard.up('ArrowRight'); await sleep(300);
+  await page.keyboard.down('ArrowRight');
+  for (let k = 0; k < 60 && (await page.evaluate(() => window.__hoops.app.assign.get('kb'))) !== 0; k++) await sleep(40);
+  await page.keyboard.up('ArrowRight'); await sleep(200);
   await tapPad(page, 0, 14); await tapPad(page, 1, 15);
   await sleep(500);
   shots.push(await snap('03-controllers.png'));

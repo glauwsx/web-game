@@ -444,7 +444,13 @@ export class GameRenderer {
         const m = this.models.get(p);
         ri.ring.position.x = p.pos.x; ri.ring.position.z = p.pos.z;
         ri.ring.material.color.set(HUMAN_COLORS[hm.slot % HUMAN_COLORS.length]);
-        ri.label.position.set(p.pos.x, p.y + p.height * 1.18 + 0.25, p.pos.z);
+        // 兩位玩家靠得很近時，把後面那位的標籤往上疊，避免重疊
+        let lift = 0;
+        for (let j = 0; j < i; j++) {
+          const o = game.humans[j] && game.humans[j].player;
+          if (o && o.onCourt && Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z) < 1.6) lift += 0.45;
+        }
+        ri.label.position.set(p.pos.x, p.y + p.height * 1.18 + 0.25 + lift, p.pos.z);
         void m;
       }
     }

@@ -1106,14 +1106,22 @@ export class Game {
     if (prev < 0.5 && p.anim.dribblePhase >= 0.5) this.emit('bounce', { x: b.pos.x, z: b.pos.z, dribble: true, player: p });
     const hand = p.anim.dribbleHand;
     let side = 0.3 * hand, fwd = 0.3 + Math.min(0.14, sp * 0.03);
-    if (a && a.type === 'move') {
-      const k = clamp(a.t / (a.dur * 0.7), 0, 1);
-      side = a.kind === 'cross' ? -0.3 * hand * (1 - 2 * k) : 0.3 * hand * Math.cos(k * Math.PI * 2);
-      fwd = 0.2;
-    }
     const handY = p.y + p.height * 0.47;
     const ph = p.anim.dribblePhase;
-    const hgt = BALL_R + (handY - BALL_R) * Math.abs(Math.cos(Math.PI * ph));
+    let hgt = BALL_R + (handY - BALL_R) * Math.abs(Math.cos(Math.PI * ph));
+    if (a && a.type === 'move') {
+      const k = clamp(a.t / (a.dur * 0.7), 0, 1);
+      if (a.kind === 'cross') {
+        // 胯下運球：球從一手壓低穿過兩腿之間到另一手
+        side = -0.3 * hand * (1 - 2 * k);
+        fwd = 0.22 - 0.2 * Math.sin(k * Math.PI);
+        hgt = BALL_R + (handY - BALL_R) * Math.abs(Math.cos(Math.PI * k)) * 0.9;
+        if (!a.bounced && k >= 0.5) { a.bounced = true; this.emit('bounce', { x: b.pos.x, z: b.pos.z, dribble: true, player: p }); }
+      } else {
+        side = 0.3 * hand * Math.cos(k * Math.PI * 2);
+        fwd = 0.2;
+      }
+    }
     b.pos.x = p.pos.x + fx * fwd + sx * side + p.vel.x * 0.02;
     b.pos.z = p.pos.z + fz * fwd + sz * side + p.vel.z * 0.02;
     b.pos.y = hgt;
@@ -1151,6 +1159,16 @@ export class Game {
       // 保險：數值異常時重置到中場
       b.pos = { x: 0, y: 1, z: 0 }; b.vel = { x: 0, y: 0, z: 0 };
     }
+    // 保險：球停在籃框或籃板上方不動時，輕推讓它掉下來
+    const bsp = Math.hypot(b.vel.x, b.vel.y, b.vel.z);
+    if (b.state !== 'held' && b.pos.y > 1.0 && bsp < 0.35 && this.phase !== 'tipoff') {
+      b.restT = (b.restT || 0) + dt;
+      if (b.restT > 1.0) {
+        b.restT = 0;
+        const a = this.rng.range(0, Math.PI * 2);
+        b.vel = { x: Math.cos(a) * 1.2 - Math.sign(b.pos.x) * 0.8, y: 0.8, z: Math.sin(a) * 1.2 };
+      }
+    } else b.restT = 0;
     if (b.state !== 'held') this.looseBallPickup();
     this.checkShotResolution();
     this.checkBallOutOfBounds();
