@@ -6,29 +6,29 @@ import { PAD_NAMES } from '../input/input.js';
 import { glyph, stickGlyph } from './glyphs.js';
 import { periodShort, periodLabel } from '../sim/rules.js';
 
-function el(html) {
+export function el(html) { // HOOPBEAT: export
   const d = document.createElement('div');
   d.innerHTML = html.trim();
   return d.firstElementChild;
 }
 
-function esc(s) {
+export function esc(s) { // HOOPBEAT: export
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 // 主要裝置的類型（拿來顯示按鍵符號）
-function primaryType(app) {
+export function primaryType(app) { // HOOPBEAT: export
   const pads = app.input.connectedDevices().filter((d) => d.kind === 'gamepad');
   return pads.length ? pads[0].type : 'keyboard';
 }
 
-function footer(app, items) {
+export function footer(app, items) { // HOOPBEAT: export
   const t = primaryType(app);
   return `<div class="footer-hints">${items.map(([a, label]) => `<span>${glyph(t, a)} ${label}</span>`).join('')}</div>`;
 }
 
 // 通用選單清單
-class MenuList {
+export class MenuList { // HOOPBEAT: export
   constructor(items, opts = {}) {
     this.items = items;
     this.focus = opts.focus || 0;

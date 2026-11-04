@@ -26,6 +26,7 @@ export const TACTICS = [
   {
     id: 'rush',
     dir: 'up',
+    keys: ['跑速', '判定窗口', '命中率', '犯規'],
     name: '全速衝刺',
     icon: '⏫',
     desc: '加快 15 BPM，鼓和貝斯換最熱鬧的片段',
@@ -41,6 +42,7 @@ export const TACTICS = [
   {
     id: 'steady',
     dir: 'down',
+    keys: ['傳球', '命中率', '跑速', '判定窗口'],
     name: '穩住節奏',
     icon: '⏬',
     desc: '放慢 15 BPM，鼓變輕、貝斯拉長音',
@@ -56,6 +58,7 @@ export const TACTICS = [
   {
     id: 'flow',
     dir: 'left',
+    keys: ['傳球', '助攻加成', '過人', '命中率'],
     name: '團隊傳導',
     icon: '🔁',
     desc: '開和弦、走路貝斯、搖擺的鼓：傳球和過人變好',
@@ -72,6 +75,7 @@ export const TACTICS = [
   {
     id: 'fire',
     dir: 'right',
+    keys: ['命中率', '手感升溫', '傳球', '過人'],
     name: '手感火力',
     icon: '🔥',
     desc: '開主旋律的主題樂句：投籃手感變好、手感升溫更快',
@@ -122,9 +126,13 @@ export function previewTactic(deck, id) {
     { label: '過人', v: mNext.dribble - mNow.dribble },
     { label: '抄截意願', v: mNext.steal - mNow.steal },
     { label: '防守', v: mNext.defense - mNow.defense },
+    { label: '助攻加成', v: mNext.assist - mNow.assist },
+    { label: '手感升溫', v: mNext.heat - mNow.heat },
     { label: '判定窗口', v: wNext / wNow - 1 },
   ].filter((d) => Math.abs(Math.round(d.v * 100)) >= 1);
-  deltas.sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+  // 先列這個戰術的重點項目，再列其他變化大的
+  const rank = (d) => { const i = t.keys.indexOf(d.label); return i < 0 ? 10 - Math.abs(d.v) : i; };
+  deltas.sort((a, b) => rank(a) - rank(b));
   return { tactic: t, bpm, deltas, features: fNext, mods: mNext };
 }
 

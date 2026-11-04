@@ -67,6 +67,17 @@ export class Stage {
     return this.ctx ? this.ctx.currentTime : performance.now() / 1000;
   }
 
+  // 耳朵「現在」聽到的是音訊時鐘的哪個時間。perfTime 可以給按鍵事件的時間（performance.now 的單位）
+  audibleNow(perfTime = performance.now()) {
+    const ctx = this.ctx;
+    if (!ctx) return perfTime / 1000;
+    if (ctx.getOutputTimestamp) {
+      const ts = ctx.getOutputTimestamp();
+      if (ts && ts.contextTime > 0 && ts.performanceTime > 0) return ts.contextTime + (perfTime - ts.performanceTime) / 1000;
+    }
+    return ctx.currentTime - this.outputLatency() - (performance.now() - perfTime) / 1000;
+  }
+
   // 耳朵現在聽到的時間（扣掉輸出延遲）
   outputLatency() {
     if (!this.ctx) return 0;
@@ -85,9 +96,11 @@ export class Stage {
     return g;
   }
 
-  // 開始播：conductor 決定播哪一台
-  async play(conductor, firstDeckId) {
-    await this.init();
+  // 開始播：conductor 決定播哪一台。AudioContext 已經建立時是同步的（拍點格線馬上可以用）
+  play(conductor, firstDeckId) {
+    if (!this.ctx) this.ctx = audioContext();
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    if (!this.sfxOut) this.init();
     this.stop();
     this.conductor = conductor;
     for (const d of Object.values(conductor.decks)) {
@@ -133,6 +146,10 @@ export class Stage {
         const on = id === deck.id;
         other.out.gain.cancelScheduledValues(time);
         other.out.gain.setTargetAtTime(on ? this.musicVolume : 0, time - (on ? 0.01 : 0), on ? 0.01 : 0.12);
+      }
+      if (g.hbBpm !== deck.bpm) {
+        g.hbBpm = deck.bpm;
+        g.setGenre(GENRES[deck.bank.genre].sound, deck.bpm);
       }
       scheduleBar({ graph: g, run: this.runs[deck.id], bank: deck.playBank(), plan: res.plan, time, audible: () => true });
       if (this.onBar) this.onBar(deck, res, time);

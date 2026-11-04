@@ -5,7 +5,7 @@
 //  3. 播進攻方的歌：換邊時通知指揮。
 // 瀏覽器和無頭模擬共用；差別只在時鐘（音訊時鐘 vs 模擬時間）。
 
-import { judge, Combo, GRADE_INFO } from '../rhythm/judge.js';
+import { judge, Combo, GRADE_INFO, windowsFor } from '../rhythm/judge.js';
 import { teamModifiers, baseModifiers, GRADE_EFFECT } from '../music/effects.js';
 import { chooseShotKind } from '../hoops/sim/shooting.js';
 import { GRAVITY } from '../hoops/sim/constants.js';
@@ -38,6 +38,14 @@ export class BeatBridge {
     this.lastOffense = -1;
     this.stats = [0, 1].map(() => ({ perfect: 0, great: 0, good: 0, miss: 0, rush: 0, boosts: 0, judged: 0, badPass: 0, fumble: 0 }));
     this.djEnabled = [true, true];
+  }
+
+  // 加速模擬時改用模擬時間（不發聲）；回到正常速度時改回音訊時鐘
+  setClock(clock, headless) {
+    this.clock = clock;
+    this.headless = headless;
+    this.intents.clear();
+    if (headless) this.conductor.start(this.game.time, DECK_IDS[Math.max(0, this.game.offenseTeam())] || 'home');
   }
 
   deck(team) {
@@ -87,7 +95,10 @@ export class BeatBridge {
   // ── 每一步 ──
   preStep(dt) {
     const g = this.game;
-    if (this.headless) this.conductor.tick(g.time, 0.15);
+    if (this.headless) {
+      if (!this.conductor.running) this.conductor.start(g.time, DECK_IDS[Math.max(0, g.offenseTeam())] || 'home');
+      this.conductor.tick(g.time, 0.15);
+    }
     // 播進攻方的歌
     const off = g.offenseTeam();
     if (off !== this.lastOffense && (off === 0 || off === 1)) {
@@ -125,6 +136,7 @@ export class BeatBridge {
 
   // ── 判定 ──
   judgeAt(p, kind, time, opts = {}) {
+    if (!this.grid.segments.length) return null;
     const lat = p.human ? this.latencyMs : 0;
     const j = judge(time, this.grid, { latencyMs: lat, difficulty: this.difficulty, strongOnly: !!opts.strongOnly });
     j.kind = kind;
@@ -177,6 +189,7 @@ export class BeatBridge {
       return ok;
     }
     if (this.intents.has(p.id)) return true; // 已經決定好了，在等拍點
+    if (!this.grid.segments.length) return fn();
     const now = this.now();
     const m = this.mods[p.team];
     const rush = g.rng.next() < 0.05 + 0.35 * m.haste; // 急躁：等不及拍點
@@ -372,6 +385,12 @@ export class BeatBridge {
     return 0.5 * this.mods[team].selection;
   }
 
+  // 傳球門檻：慢歌更願意多傳一手（傳導），快歌比較少傳
+  aiPassMargin(team) {
+    const m = this.mods[team];
+    return 0.22 - 0.2 * m.calm + 0.06 * m.haste;
+  }
+
   aiDecision(team) {
     return this.mods[team].decision;
   }
@@ -395,6 +414,10 @@ export class BeatBridge {
       if (!f) continue;
       if (f.freshness < 0.75 && d.barsToPhrase() === 1 && g.rng.next() < 0.02) d.jumpSection(1);
     }
+  }
+
+  windowsFor(bpm) {
+    return windowsFor(this.difficulty, bpm);
   }
 
   gradeInfo(g) {

@@ -134,6 +134,8 @@ export class InputManager {
       mx: 0, my: 0, sprint: false, stance: false,
       shoot: false, shootDown: false, pass: false, passDown: false,
       move: false, moveDown: false, lob: false, lobDown: false, pause: false,
+      // HOOPBEAT: 戰術配樂（十字鍵／肩鍵／數字鍵），只記按下的瞬間
+      dj: { up: false, down: false, left: false, right: false, prev: false, next: false, reset: false },
     };
     if (id === 'kb') {
       const k = (c) => this.keyDown(c);
@@ -153,20 +155,20 @@ export class InputManager {
       inp.move = k('KeyL'); inp.moveDown = kp('KeyL');
       inp.lob = k('KeyI'); inp.lobDown = kp('KeyI');
       inp.pause = kp('Escape') || kp('KeyP');
+      // HOOPBEAT: 1～4 換戰術配樂、Q／E 換段落、R 回到原曲
+      inp.dj = { up: kp('Digit1'), down: kp('Digit2'), left: kp('Digit3'), right: kp('Digit4'), prev: kp('KeyQ'), next: kp('KeyE'), reset: kp('KeyR') };
       return inp;
     }
     const s = this.padState.get(id);
     if (!s) return inp;
-    let [x, y] = shapeStick(s.axes[0], s.axes[1]);
-    if (s.buttons[BTN.LEFT]) x = -1;
-    if (s.buttons[BTN.RIGHT]) x = 1;
-    if (s.buttons[BTN.UP]) y = -1;
-    if (s.buttons[BTN.DOWN]) y = 1;
+    // HOOPBEAT: 十字鍵不再控制移動，改成戰術配樂；LB／RB 換段落
+    const [x, y] = shapeStick(s.axes[0], s.axes[1]);
     inp.mx = x; inp.my = y;
     const b = s.buttons, pv = s.prev;
     const pr = (i) => b[i] && !pv[i];
-    inp.sprint = b[BTN.RT] || b[BTN.RB];
-    inp.stance = b[BTN.LT] || b[BTN.LB];
+    inp.sprint = b[BTN.RT];
+    inp.stance = b[BTN.LT];
+    inp.dj = { up: pr(BTN.UP), down: pr(BTN.DOWN), left: pr(BTN.LEFT), right: pr(BTN.RIGHT), prev: pr(BTN.LB), next: pr(BTN.RB), reset: pr(BTN.BACK) || pr(BTN.RS) };
     inp.shoot = b[BTN.X]; inp.shootDown = pr(BTN.X);
     inp.pass = b[BTN.A]; inp.passDown = pr(BTN.A);
     inp.move = b[BTN.B]; inp.moveDown = pr(BTN.B);

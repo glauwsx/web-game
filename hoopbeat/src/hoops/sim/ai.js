@@ -253,7 +253,8 @@ export class TeamAI {
     const tooContested = ev.contest > (ev.points === 3 ? 0.5 : 0.62) * (0.8 + 0.4 * iq) && sc > 6;
     if (!inBack && !tooContested && ev.ev > thr && ev.d < 8.6 && (!opt || opt.value < ev.ev + 0.3)) { g.startShot(p); return; }
     // 5. 傳球
-    if (opt && ai.hold > 0.55 * dm && opt.value > Math.max(ev.ev, 0.75) + 0.22) { g.passBall(p, opt.target, { kind: opt.kind }); return; }
+    const pm = g.beat ? g.beat.aiPassMargin(this.team) : 0.22; // HOOPBEAT: 慢歌多傳導
+    if (opt && ai.hold > 0.55 * dm && opt.value > Math.max(ev.ev, 0.75) + pm) { g.passBall(p, opt.target, { kind: opt.kind }); return; }
     if (opt && ai.hold > (ai.holdLimit || 2.6) * dm && opt.value > 0.6 && !inBack && rng.chance(0.5)) { g.passBall(p, opt.target, { kind: opt.kind }); ai.holdLimit = rng.range(2.4, 4.5); return; }
     // 6. 運球突破
     const near = this.nearestOpponent(p);

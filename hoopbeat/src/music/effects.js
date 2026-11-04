@@ -48,6 +48,10 @@ export const RULES = [
         { stat: 'foul', delta: 1.3 * haste - 0.2 * calm },
         { stat: 'stamina', delta: 0.3 * haste - 0.1 * calm },
         { stat: 'aggression', delta: 0.2 * haste - 0.1 * calm },
+        // 慢歌主打傳導：傳得準、助攻加成高；但抄截意願低
+        { stat: 'pass', delta: 0.06 * calm - 0.03 * haste },
+        { stat: 'assist', delta: 0.07 * calm },
+        { stat: 'steal', delta: 0.25 * haste - 0.3 * calm },
       ];
     },
   },

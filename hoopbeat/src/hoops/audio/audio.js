@@ -13,7 +13,7 @@ export class AudioSystem {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-      this.ctx = new AC();
+      this.ctx = (AudioSystem.sharedContext && AudioSystem.sharedContext()) || new AC(); // HOOPBEAT: 跟配樂共用一個 AudioContext
       const c = this.ctx;
       this.master = c.createGain();
       this.master.gain.value = this.volume;
