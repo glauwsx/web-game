@@ -84,10 +84,14 @@ test('對應：BPM 越快 → 跑越快、出手越早，但命中率降、失�
   assert.ok(m80.shot > m120.shot && m120.shot > m170.shot);
   assert.ok(m80.selection > m170.selection);
   assert.ok(m170.turnover > m120.turnover && m120.turnover >= m80.turnover);
-  assert.ok(m170.foul > m120.foul * 1.8);
+  assert.ok(m170.foul > m120.foul * 1.5);
+  // 慢歌主打傳導：傳球、助攻比較好；快歌全場壓迫：防守比較好
+  assert.ok(m80.pass > m120.pass && m120.pass > m170.pass);
+  assert.ok(m80.assist > m120.assist);
+  assert.ok(m170.defense > m120.defense);
   assert.ok(m170.haste > 0.9 && m80.haste === 0 && m80.calm > 0.7);
-  // 差距要明顯：170 比 120 命中率至少低 8 個百分點
-  assert.ok(m120.shot - m170.shot >= 0.08);
+  // 差距要明顯：170 比 120 命中率至少低 5 個百分點
+  assert.ok(m120.shot - m170.shot >= 0.05);
 });
 
 test('對應：各特徵往設計的方向影響', () => {
@@ -124,7 +128,7 @@ test('對應：節奏連擊與段落交界的士氣是加分', () => {
 
 test('說明文字：BPM 160 顯示急躁和命中率下降', () => {
   const f = computeFeatures(deck({ bpm: 160 }));
-  assert.equal(headline(f), 'BPM 160：急躁 +80%，命中率 −8%');
+  assert.equal(headline(f), 'BPM 160：急躁 +80%，命中率 −5%');
   const lines = explain(f);
   assert.equal(lines.length, RULES.length);
   assert.ok(lines[0].effects.some((t) => t.startsWith('犯規 +')));

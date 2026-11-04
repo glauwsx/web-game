@@ -42,10 +42,12 @@ export const RULES = [
       return [
         { stat: 'speed', delta: 0.22 * f.tempo },
         { stat: 'decision', delta: -0.5 * haste + 0.45 * calm },
-        { stat: 'shot', delta: -0.1 * haste + 0.04 * calm },
-        { stat: 'selection', delta: -0.25 * haste + 0.2 * calm },
-        { stat: 'turnover', delta: 0.07 * haste - 0.015 * calm },
-        { stat: 'foul', delta: 1.3 * haste - 0.2 * calm },
+        { stat: 'shot', delta: -0.06 * haste + 0.04 * calm },
+        { stat: 'selection', delta: -0.15 * haste + 0.2 * calm },
+        { stat: 'turnover', delta: 0.05 * haste - 0.015 * calm },
+        { stat: 'foul', delta: 0.9 * haste - 0.2 * calm },
+        // 快歌：全場壓迫，防守貼得更緊
+        { stat: 'defense', delta: 0.12 * haste - 0.04 * calm },
         { stat: 'stamina', delta: 0.3 * haste - 0.1 * calm },
         { stat: 'aggression', delta: 0.2 * haste - 0.1 * calm },
         // 慢歌主打傳導：傳得準、助攻加成高；但抄截意願低

@@ -347,8 +347,8 @@ export function appendRhythmStats(app, screen) {
   };
   const html = `<div class="rhythm-stats"><div class="box-title">節奏統計</div><table class="box"><tr><th>隊</th><th>配樂</th><th>BPM</th><th>Perfect</th><th>Great</th><th>Good</th><th>Miss</th><th>踩中率</th><th>最高連擊</th><th>等不及拍點</th><th>段落士氣</th><th>傳歪</th></tr>${row(0)}${row(1)}</table></div>`;
   const target = screen.el.querySelector('.results') || screen.el.querySelector('.panel') || screen.el;
-  const btns = target.querySelector('.row-btns');
-  if (btns) btns.insertAdjacentHTML('beforebegin', html);
+  const anchor = target.querySelector('.mvp') || target.querySelector('.periods');
+  if (anchor) anchor.insertAdjacentHTML('afterend', html);
   else target.insertAdjacentHTML('beforeend', html);
 }
 

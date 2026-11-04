@@ -26,7 +26,7 @@ export function runMatch({ bpm, bpmAway = bpm, seed = 1, home = TEAMS[0], away =
   const line = (ti) => {
     const ps = g.teams[ti].players;
     const s = (k) => ps.reduce((a, p) => a + p.stats[k], 0);
-    return { pts: s('pts'), fgm: s('fgm'), fga: s('fga'), tpa: s('tpa'), tov: s('tov'), pf: s('pf'), stl: s('stl'), ast: s('ast'), fta: s('fta') };
+    return { pts: s("pts"), fgm: s("fgm"), fga: s("fga"), tpa: s("tpa"), tov: s("tov"), pf: s("pf"), stl: s("stl"), ast: s("ast"), fta: s("fta") };
   };
   return { g, bridge, home: line(0), away: line(1), possessions: g.stats.possessions, simSeconds: t, judge: bridge.stats };
 }

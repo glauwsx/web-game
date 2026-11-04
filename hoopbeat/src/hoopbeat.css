@@ -69,6 +69,13 @@
 .hb-panel .combo b { color: var(--beat); font-size: 15px; }
 .hb-panel .combo small { color: #7d889c; margin-left: 4px; }
 .hb-panel .pend { margin-top: 3px; color: #ffb347; font-weight: 800; animation: pulse 0.8s infinite; }
+.hb-panel[data-view="normal"] .effects { display: none; }
+.hb-panel[data-view="detail"] .chips, .hb-panel[data-view="mini"] .chips { display: none; }
+.hb-panel .chips { display: flex; flex-wrap: wrap; gap: 3px; margin: 2px 0; }
+.hb-panel .chips span { padding: 0 5px; border-radius: 5px; background: rgba(255,255,255,0.07); font-weight: 700; font-size: 11px; }
+.hb-panel .chips .t-hot { color: #ffb08a; } .hb-panel .chips .t-calm { color: #a9dcff; }
+.hb-panel .chips .t-good { color: #8ff5bf; } .hb-panel .chips .t-bad { color: #ff9c9c; } .hb-panel .chips .t-neutral { color: #dfe6f2; }
+.hb-panel[data-view="mini"] .effects, .hb-panel[data-view="mini"] .feats, .hb-panel[data-view="mini"] .meta, .hb-panel[data-view="mini"] .opt span:not(.glyph) { display: none; }
 .hb-panel .plan { margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 5px; }
 .hb-panel .plan-hd { font-weight: 900; color: #fff; margin-bottom: 2px; }
 .hb-panel .opt { display: flex; align-items: center; gap: 2px 5px; padding: 1px 3px; border-radius: 6px; white-space: nowrap; overflow: hidden; }
@@ -95,7 +102,9 @@
 .si-note { color: #7d889c; font-size: 12px; margin-top: 8px; }
 
 /* 操作說明 */
-.help-panel { width: min(1100px, 96vw); max-height: 92vh; overflow: auto; }
+.help-panel { width: min(1100px, 96vw); max-height: 84vh; overflow: auto; margin-bottom: 4vh; }
+.help-panel h1 { margin-bottom: 8px; }
+.help-table td, .help-table th { padding: 3px 8px; }
 .help-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .help-table th { text-align: left; color: var(--dim); padding: 5px 8px; border-bottom: 1px solid var(--line); }
 .help-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }

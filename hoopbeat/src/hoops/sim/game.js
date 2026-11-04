@@ -1231,6 +1231,7 @@ export class Game {
             if (!p.human) pi *= this.diff.interceptMul;
             if (p.airborne) pi += 0.15;
             if (ps.inbound) pi *= 0.6;
+            if (this.beat) pi *= this.beat.interceptMul(ps.passer.team, p.team); // HOOPBEAT: 傳球準度 vs 抄截意願
             if (this.rng.chance(clamp(pi, 0.03, 0.75))) {
               if (this.rng.chance(0.6)) {
                 p.stats.stl++;

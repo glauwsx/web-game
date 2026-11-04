@@ -183,6 +183,10 @@ export class HoopbeatApp extends App {
       if (dj.prev) { deck.jumpSection(-1); did = '上一段'; }
       if (dj.next) { deck.jumpSection(1); did = '下一段'; }
       if (dj.reset) { deck.resetLive(); did = '回到原曲'; }
+      if (dj.view) {
+        const v = this.beatHud.cycleView();
+        this.hud.showTicker(`音樂面板：${v}`, 1.2);
+      }
       if (did) {
         this.audio.ui('move');
         const wait = deck.playing ? '（下一小節生效）' : '（已換好，換你進攻時會播）';

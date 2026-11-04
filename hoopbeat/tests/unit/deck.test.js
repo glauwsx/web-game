@@ -114,3 +114,15 @@ test('指揮：播進攻方的歌，換邊時在小節線切換速度', () => {
   assert.equal(home.barsPlayed, 3);
   assert.equal(away.barsPlayed, 1);
 });
+
+test('配樂台：歌曲自己換段不算士氣，只有手動切換才算', () => {
+  const d = mk('home');
+  d.playing = true;
+  let auto = 0;
+  for (let i = 0; i < d.totalBars * 2; i++) if (d.advanceBar(i).boosted) auto++;
+  assert.equal(auto, 0);
+  while (d.barsPlayed % 4 !== 0) d.advanceBar(0);
+  for (let i = 0; i < 4; i++) d.advanceBar(0);
+  d.cycleClip('lead', 1);
+  assert.equal(d.advanceBar(100).boosted, true);
+});

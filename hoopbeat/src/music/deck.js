@@ -185,6 +185,7 @@ export class Deck {
 
   // 在小節線上播一個小節。回傳給播放器的計畫（loops 的格式）。
   advanceBar(time = 0) {
+    const manual = !!this.pending; // 這個小節的變化是不是手動切換的（歌曲自己換段不算）
     this.applyPending();
     const loc = this.sectionAt();
     const clips = this.currentClips();
@@ -196,7 +197,7 @@ export class Deck {
       this.changes += 1;
       // 在樂句開頭（每 4 小節）換片段，而且不是一直狂換 → 士氣提振
       const onPhrase = mod(this.barsPlayed, PHRASE_BARS) === 0;
-      if (onPhrase && this.barsPlayed - this.lastChangeBar >= PHRASE_BARS) {
+      if (manual && onPhrase && this.barsPlayed - this.lastChangeBar >= PHRASE_BARS) {
         this.moraleTime = time;
         boosted = true;
         this.boosts += 1;

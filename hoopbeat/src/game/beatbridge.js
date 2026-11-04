@@ -192,7 +192,7 @@ export class BeatBridge {
     if (!this.grid.segments.length) return fn();
     const now = this.now();
     const m = this.mods[p.team];
-    const rush = g.rng.next() < 0.05 + 0.35 * m.haste; // 急躁：等不及拍點
+    const rush = g.rng.next() < 0.05 + 0.25 * m.haste; // 急躁：等不及拍點
     const r = g.rules;
     const urgent = (!r.shotClockOff && r.shotClock < 1.4) || r.gameClock < 1.4;
     const intent = { kind, fn, rush: rush || urgent, created: now, args };
@@ -356,6 +356,13 @@ export class BeatBridge {
     const isBad = this.game.rng.next() < bad;
     if (isBad) this.stats[p.team].badPass += 1;
     return { errMul, bad: isBad, speedMul: g === 'perfect' ? 0.9 : 1 };
+  }
+
+  // 傳球被抄的機率倍數：傳球方越準越難抄、防守方越想抄越容易
+  interceptMul(passTeam, defTeam) {
+    const mp = this.mods[passTeam];
+    const md = this.mods[defTeam];
+    return Math.max(0.3, (1 - 3 * mp.pass) * (0.6 + 0.4 * md.steal));
   }
 
   // 過人：成功率加減、運球失誤的機率加減

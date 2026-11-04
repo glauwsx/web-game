@@ -29,7 +29,15 @@ export class BeatHUD {
     this.panelTimer = 0;
     this.previewCache = [null, null];
     this.previewTimer = 0;
-    this.collapsed = false;
+    this.view = 'normal'; // normal → detail → mini
+  }
+
+  cycleView() {
+    const order = ['normal', 'detail', 'mini'];
+    this.view = order[(order.indexOf(this.view) + 1) % order.length];
+    for (const p of this.panels) p.dataset.view = this.view;
+    this.panelTimer = 0;
+    return { normal: '標準', detail: '詳細', mini: '精簡' }[this.view];
   }
 
   setup(bridge, game) {
@@ -39,7 +47,7 @@ export class BeatHUD {
     this.panelTimer = 0;
     this.popups.innerHTML = '';
     this.lastBeat = null;
-    for (let t = 0; t < 2; t++) this.panels[t].innerHTML = '';
+    for (let t = 0; t < 2; t++) { this.panels[t].innerHTML = ''; this.panels[t].dataset.view = this.view; }
   }
 
   show(on) {
@@ -240,6 +248,7 @@ export class BeatHUD {
           <span class="${f.harmony > 0.05 ? 'on' : 'off'}">和弦</span><span class="${f.melody > 0.05 ? 'on' : 'off'}">主旋律</span><span class="${f.bass > 0.05 ? 'on' : 'off'}">貝斯</span>
         </div>
         <ul class="effects">${lines.slice(1).map((l) => `<li class="t-${l.mood.tone}"><b>${esc(l.title)}</b>${l.effects.length ? ` ${esc(l.effects.join('、'))}` : ` ${esc(l.mood.text)}`}</li>`).join('')}</ul>
+        <div class="chips">${lines.slice(1).filter((l) => l.effects.length).map((l) => `<span class="t-${l.mood.tone}" title="${esc(l.title)}">${esc(l.effects[0])}</span>`).join('')}</div>
         <div class="combo">節奏連擊 <b>${combo.count}</b>${combo.count >= 16 ? ' 🔥' : ''} <small>最高 ${combo.max}</small></div>
         ${pendTxt}`;
       if (human) {
@@ -250,7 +259,7 @@ export class BeatHUD {
         html += `<div class="plan"><div class="plan-hd">比賽計劃（${kb ? '數字鍵 1～4' : '十字鍵'}）</div>${this.previewCache[t]
           .map(({ tc, pv }, i) => `<div class="opt${deck.tactic === tc.id ? ' cur' : ''}">${keyFor(tc, i)}<b>${tc.icon} ${esc(tc.name)}</b>${formatPreview(pv, 2).map((d) => `<span class="${d.good ? 'g' : 'b'}">${esc(d.text)}</span>`).join('')}</div>`)
           .join('')}
-          <div class="plan-ft">${kb ? '<span class="glyph kb">Q</span><span class="glyph kb">E</span>' : `${glyph(type, 'lb')}${glyph(type, 'rb')}`} 換段落　${kb ? '<span class="glyph kb">R</span>' : `<span class="glyph wide">${(GLYPHS[type] || GLYPHS.xbox).back}</span>`} 回到原曲</div></div>`;
+          <div class="plan-ft">${kb ? '<span class="glyph kb">Tab</span>' : `<span class="glyph wide">${type === 'ps' ? 'R3' : 'RS'}</span>`} 面板 ${kb ? '<span class="glyph kb">Q</span><span class="glyph kb">E</span>' : `${glyph(type, 'lb')}${glyph(type, 'rb')}`} 段落 ${kb ? '<span class="glyph kb">R</span>' : `<span class="glyph wide">${(GLYPHS[type] || GLYPHS.xbox).back}</span>`} 原曲</div></div>`;
       }
       el.innerHTML = html;
       el.classList.toggle('playing', playing);

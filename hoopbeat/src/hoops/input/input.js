@@ -156,7 +156,7 @@ export class InputManager {
       inp.lob = k('KeyI'); inp.lobDown = kp('KeyI');
       inp.pause = kp('Escape') || kp('KeyP');
       // HOOPBEAT: 1～4 換戰術配樂、Q／E 換段落、R 回到原曲
-      inp.dj = { up: kp('Digit1'), down: kp('Digit2'), left: kp('Digit3'), right: kp('Digit4'), prev: kp('KeyQ'), next: kp('KeyE'), reset: kp('KeyR') };
+      inp.dj = { up: kp('Digit1'), down: kp('Digit2'), left: kp('Digit3'), right: kp('Digit4'), prev: kp('KeyQ'), next: kp('KeyE'), reset: kp('KeyR'), view: kp('Tab') };
       return inp;
     }
     const s = this.padState.get(id);
@@ -168,7 +168,7 @@ export class InputManager {
     const pr = (i) => b[i] && !pv[i];
     inp.sprint = b[BTN.RT];
     inp.stance = b[BTN.LT];
-    inp.dj = { up: pr(BTN.UP), down: pr(BTN.DOWN), left: pr(BTN.LEFT), right: pr(BTN.RIGHT), prev: pr(BTN.LB), next: pr(BTN.RB), reset: pr(BTN.BACK) || pr(BTN.RS) };
+    inp.dj = { up: pr(BTN.UP), down: pr(BTN.DOWN), left: pr(BTN.LEFT), right: pr(BTN.RIGHT), prev: pr(BTN.LB), next: pr(BTN.RB), reset: pr(BTN.BACK), view: pr(BTN.RS) };
     inp.shoot = b[BTN.X]; inp.shootDown = pr(BTN.X);
     inp.pass = b[BTN.A]; inp.passDown = pr(BTN.A);
     inp.move = b[BTN.B]; inp.moveDown = pr(BTN.B);
