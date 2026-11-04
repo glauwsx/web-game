@@ -199,6 +199,57 @@ export class BeatHUD {
     }
   }
 
+  // 投籃條：取代 hoops 的時機條。條的高度代表時間：從「強拍前 0.8 秒」到「強拍後 0.16 秒」，
+  // 強拍在 83% 高的位置；金色區 = Perfect 窗口、淺綠區 = Great 窗口（窗口越窄，區域越窄）。
+  updateMeter(dt, game, renderer) {
+    const hud = this.app.hud;
+    const br = this.bridge;
+    let shooter = null;
+    for (const h of game.humans) {
+      const p = h.player;
+      if (p && p.action && p.action.type === 'shot' && (p.action.kind === 'jump' || p.action.kind === 'ft') && p.action.beatTarget) shooter = p;
+    }
+    if (shooter) { hud.meterShot = shooter; hud.meterTimer = 1.1; }
+    hud.meterTimer -= dt;
+    const p = hud.meterShot;
+    const a = p && p.action && p.action.type === 'shot' ? p.action : hud.meterAction;
+    if (!br || !p || !a || !a.beatTarget || (!shooter && hud.meterTimer <= 0)) {
+      hud.meter.classList.remove('show');
+      hud.meterShot = null;
+      hud.meterAction = null;
+      return;
+    }
+    hud.meterAction = a;
+    const SPAN = 0.8;
+    const OVER = 0.16;
+    const total = SPAN + OVER;
+    const start = a.beatTarget - SPAN;
+    const now = a.released && a.beat ? a.beat.t : br.now();
+    const frac = Math.max(0, Math.min(1, (now - start) / total));
+    const zc = SPAN / total;
+    const pos = renderer.project(p.pos.x, p.y + p.height * 0.8, p.pos.z);
+    hud.meter.style.left = `${pos.x + 46}px`;
+    hud.meter.style.top = `${pos.y - 80}px`;
+    hud.meter.classList.add('show');
+    hud.meterFill.style.height = `${frac * 100}%`;
+    const w = a.beatWin;
+    const hP = (2 * w.perfect) / 1000 / total;
+    const hG = (2 * w.great) / 1000 / total;
+    hud.meterZone.style.bottom = `${(zc - hP / 2) * 100}%`;
+    hud.meterZone.style.height = `${hP * 100}%`;
+    const z2 = hud.meter.querySelector('.meter-zone2');
+    if (z2) { z2.style.bottom = `${(zc - hG / 2) * 100}%`; z2.style.height = `${hG * 100}%`; }
+    if (a.released && a.beat) {
+      const info = GRADE_INFO[a.beat.grade];
+      const off = Math.round(a.beat.offsetMs);
+      hud.meterLabel.innerHTML = `${info.label}<span class="meter-sub">${a.beat.grade === 'perfect' ? '強拍出手' : `${off < 0 ? '早' : '晚'} ${Math.abs(off)}ms${a.beat.weakBeat ? '・弱拍' : ''}`}</span>`;
+      hud.meterLabel.style.color = info.color;
+    } else {
+      hud.meterLabel.innerHTML = '<span class="meter-sub">強拍放開</span>';
+      hud.meterLabel.style.color = '#fff';
+    }
+  }
+
   windows(bpm) {
     const key = `${this.bridge.difficulty}|${bpm}`;
     if (this.winKey !== key) {

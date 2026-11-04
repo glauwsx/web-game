@@ -303,6 +303,25 @@ export class BeatBridge {
     return Math.max(min, Math.min(max, rel));
   }
 
+  // 真人按住投籃（跳投、罰球）：選下一個強拍當目標，調整蹲下的時間，讓起跳到最高點附近剛好是強拍。
+  // 投籃條（HUD）照這個目標畫。
+  humanShotPlan(p, a) {
+    if (!this.grid.segments.length) return;
+    const now = this.pressTime(p, 'shot');
+    const rise = a.kind === 'ft' ? 0.3 : (0.92 * a.jumpV) / GRAVITY;
+    const minLead = a.kind === 'ft' ? 0.35 : 0.13 + rise;
+    const target = this.grid.nextBeat(now + minLead, { strongOnly: true });
+    a.beatTarget = target.time;
+    a.beatStart = now;
+    a.beatWin = this.windowsFor(target.bpm);
+    if (a.kind === 'jump') {
+      a.gather = Math.min(1.6, Math.max(0.13, target.time - now - rise));
+      a.ideal = a.gather + rise;
+    } else {
+      a.ideal = target.time - now;
+    }
+  }
+
   // 投籃出手時：判定 + 命中率倍數
   shotTiming(p, a) {
     let j = a.beat || null;

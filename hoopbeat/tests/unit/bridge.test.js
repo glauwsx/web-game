@@ -124,3 +124,43 @@ test('戰術配樂：全速衝刺加速、穩住節奏減速，預告方向正�
   assert.equal(d.tactic, null);
   assert.equal(TACTICS.length, 4);
 });
+
+test('投籃條：真人按住跳投，目標是下一個強拍；在強拍放開是 Perfect', () => {
+  for (const bpm of [80, 170]) {
+    const { g, bridge, clock, run } = setup({ humans: [{ id: 'kb', team: 0 }], bpm });
+    run(8);
+    const p = g.humans[0].player;
+    // 把球給這位球員，放到三分線內的空地
+    g.phase = 'live';
+    g.ball.setHeld ? g.ball.setHeld(p) : (g.ball.holder = p);
+    g.ball.holder = p;
+    p.action = null; p.y = 0; p.vy = 0;
+    const side = g.attackSide(0);
+    p.pos.x = side * 7.5; p.pos.z = 0;
+    for (const d of g.onCourt(1)) { d.pos.x = -side * 10; d.pos.z = 5; }
+    assert.ok(g.startShot(p), `bpm ${bpm} 可以出手`);
+    const a = p.action;
+    assert.equal(a.kind, 'jump');
+    assert.ok(a.beatTarget > clock.t, '目標在未來');
+    assert.equal(bridge.grid.nearest(a.beatTarget).strong, true, '目標是強拍');
+    // 起跳到最高點剛好是強拍
+    assert.ok(Math.abs(clock.t + a.ideal - a.beatTarget) < 0.02);
+    if (bpm === 80) assert.ok(a.beatTarget - clock.t >= 0.4);
+    // 一直按住投籃鍵，跑到強拍那一刻放開
+    g.humans[0].input = { ...g.humans[0].input, shoot: true, mx: 0, my: 0 };
+    while (clock.t + 1e-9 < a.beatTarget - 1 / 120) {
+      clock.t += 1 / 60;
+      bridge.conductor.tick(clock.t, 0.15);
+      g.step(1 / 60);
+      if (a.released) break;
+    }
+    assert.equal(a.released, false, `bpm ${bpm}：還沒到強拍就自動出手了`);
+    clock.t = a.beatTarget;
+    a.humanReleased = true;
+    g.releaseShot(p);
+    assert.equal(a.beat.grade, 'perfect', `bpm ${bpm}`);
+    // 窗口：快歌比慢歌窄
+    if (bpm === 170) assert.ok(a.beatWin.perfect < 35);
+    if (bpm === 80) assert.ok(a.beatWin.perfect > 50);
+  }
+});

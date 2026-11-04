@@ -584,6 +584,8 @@ export class Game {
         // HOOPBEAT: 電腦把出手時間對齊強拍
         if (this.beat) { const ra = this.beat.aiReleaseAt(p, a); if (ra != null) a.releaseAt = ra; }
       }
+      // HOOPBEAT: 真人按住投籃：目標是下一個強拍，起跳時間往回推（投籃條在強拍時到綠區）
+      if (a.humanHold && this.beat) this.beat.humanShotPlan(p, a);
       p.vel.x *= 0.25; p.vel.z *= 0.25;
       p.facing = faceHoop;
     } else if (kind === 'layup') {
@@ -628,7 +630,7 @@ export class Game {
       }
     } else if (a.kind === 'ft') {
       if (!a.released) {
-        const rel = a.humanHold ? a.humanReleased || a.t > 1.6 : a.t >= a.releaseAt;
+        const rel = a.humanHold ? a.humanReleased || a.t > Math.max(1.6, (a.ideal || 0) + 0.4) : a.t >= a.releaseAt; // HOOPBEAT: 慢歌的強拍比較遠
         if (rel) this.releaseShot(p);
       } else if (a.t > (a.releaseT || 0) + 0.6) p.action = null;
     } else if (a.kind === 'layup') {

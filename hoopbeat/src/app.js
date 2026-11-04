@@ -65,6 +65,9 @@ export class HoopbeatApp extends App {
       origHud(dt, g, r);
       this.beatHud.update(dt, g, r);
     };
+    // 投籃條改成跟著拍子走（有配樂時）；沒有配樂（例如標題畫面的示範賽）就用 hoops 原本的
+    const origMeter = this.hud.updateMeter.bind(this.hud);
+    this.hud.updateMeter = (dt, g, r) => (this.bridge && g === this.game ? this.beatHud.updateMeter(dt, g, r) : origMeter(dt, g, r));
     const origShow = this.hud.show.bind(this.hud);
     this.hud.show = (on) => { origShow(on); this.beatHud.show(on && !!this.bridge); };
     const unlock = () => { this.stage.init(); };

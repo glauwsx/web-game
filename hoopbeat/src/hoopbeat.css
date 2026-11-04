@@ -6,8 +6,14 @@
   filter: drop-shadow(0 6px 0 rgba(120, 70, 255, 0.85)) drop-shadow(0 14px 30px rgba(0,0,0,0.6)); }
 .hb-logo .en { color: #b9a4ff; letter-spacing: 0.5em; }
 
-/* 投籃改成拍點判定：hoops 原本的時機條先關掉 */
-#meter { display: none !important; }
+/* 投籃條：跟著拍子走。條在強拍那一刻到 Perfect 區（金色），淺綠是 Great 區 */
+#meter { width: 18px; height: 132px; overflow: visible; }
+#meter .meter-label { left: 26px; top: 0; font-size: 17px; }
+#meter .meter-fill { background: linear-gradient(0deg, #6cc6ff, #ffffff); opacity: 0.9; }
+#meter .meter-zone { background: rgba(255, 216, 74, 0.95); border-color: #fff; z-index: 2; }
+#meter .meter-zone2 { position: absolute; left: 0; right: 0; background: rgba(94, 240, 160, 0.45); z-index: 1; }
+#meter .meter-label { z-index: 3; }
+#meter .meter-sub { display: block; font-size: 12px; color: #fff; font-weight: 700; }
 
 /* 跟著拍子跳的邊框 */
 #hb-pulse { position: fixed; inset: 0; pointer-events: none; z-index: 4; opacity: 0;
@@ -55,6 +61,7 @@
 .hb-panel .head { margin: 4px 0 2px; font-weight: 900; font-size: 13px; color: #fff; }
 .hb-panel .feats { display: flex; flex-wrap: wrap; gap: 3px 10px; color: #aab5c9; margin-bottom: 3px; }
 .hb-panel .feats .bar { display: inline-block; width: 34px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.15); margin-left: 4px; vertical-align: middle; overflow: hidden; }
+#meter .meter-fill { border-radius: 0 0 7px 7px; }
 .hb-panel .feats .bar i { display: block; height: 100%; background: linear-gradient(90deg, #6cc6ff, #ffd84a); }
 .hb-panel .feats .on { color: #5ef0a0; }
 .hb-panel .feats .off { color: #6d7789; text-decoration: line-through; }
