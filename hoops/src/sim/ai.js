@@ -239,19 +239,21 @@ export class TeamAI {
       return;
     }
     const opt = this.bestPassOption(p);
+    // 擋拆的掩護正在靠近：先等一下，不急著傳
+    const waitScreen = this.pnr && this.pnr.handler === p && this.pnr.state === 'approach' && sc > 7;
     // 4. 好的出手機會
     const tend = (ev.points === 3 ? (p.r.three - 75) : (p.r.mid - 72)) * 0.006;
-    let thr = (ev.points === 3 ? 1.07 : 0.9) - tend - (1 - iq) * 0.35;
+    let thr = (ev.points === 3 ? 1.13 : 0.9) - tend - (1 - iq) * 0.35;
     // 接球就投：剛接到球且有空檔時更積極
     if (ai.hold < 0.6 && ev.contest < 0.45) thr -= 0.08;
     if (sc < 8) thr -= 0.15;
     if (sc < 5) thr -= 0.15;
     if (this.transition > 0 && ev.points === 3) thr += 0.12;
-    const tooContested = ev.contest > (ev.points === 3 ? 0.5 : 0.62) * (0.8 + 0.4 * iq) && sc > 6;
+    const tooContested = ev.contest > (ev.points === 3 ? 0.44 : 0.62) * (0.8 + 0.4 * iq) && sc > 6;
     if (!inBack && !tooContested && ev.ev > thr && ev.d < 8.6 && (!opt || opt.value < ev.ev + 0.3)) { g.startShot(p); return; }
     // 5. 傳球
-    if (opt && ai.hold > 0.55 && opt.value > Math.max(ev.ev, 0.75) + 0.22) { g.passBall(p, opt.target, { kind: opt.kind }); return; }
-    if (opt && ai.hold > (ai.holdLimit || 2.6) && opt.value > 0.6 && !inBack && rng.chance(0.5)) { g.passBall(p, opt.target, { kind: opt.kind }); ai.holdLimit = rng.range(2.4, 4.5); return; }
+    if (opt && ai.hold > 0.55 && opt.value > Math.max(ev.ev, 0.75) + (waitScreen ? 0.45 : 0.22)) { g.passBall(p, opt.target, { kind: opt.kind }); return; }
+    if (opt && !waitScreen && ai.hold > (ai.holdLimit || 2.6) && opt.value > 0.6 && !inBack && rng.chance(0.5)) { g.passBall(p, opt.target, { kind: opt.kind }); ai.holdLimit = rng.range(2.4, 4.5); return; }
     // 6. 運球突破
     const near = this.nearestOpponent(p);
     const nd = near ? dist2(near.pos.x, near.pos.z, p.pos.x, p.pos.z) : 99;
@@ -281,6 +283,10 @@ export class TeamAI {
       if (dHoop > 3) ai.target = { x: p.pos.x + ux * 3, z: p.pos.z + uz * 3 };
       ai.sprint = true;
       if (dHoop < 6 && !lane.open && rng.chance(0.35)) ai.mode = null;
+    } else if (waitScreen) {
+      // 原地小幅運球等掩護
+      ai.target = { x: p.pos.x + (hoop.x - p.pos.x) * 0.02, z: p.pos.z };
+      ai.sprint = false;
     } else if (pn && pn.handler === p && pn.state === 'set' && pn.t2 > 0.25) {
       const s = pn.screener;
       const ux = (hoop.x - s.pos.x), uz = (hoop.z - s.pos.z);
@@ -370,8 +376,8 @@ export class TeamAI {
       if (m.human) value += 0.1;
       let kind = 'chest';
       let v = value - risk * 1.4;
-      if (risk > 0.35 && d < 13) {
-        const vl = value - risk * 0.25 - 0.12;
+      if (risk > 0.5 && d < 13) {
+        const vl = value - risk * 0.45 - 0.22;
         if (vl > v) { v = vl; kind = 'lob'; }
       }
       if ((m.ai.mode === 'cut' || m.ai.mode === 'roll') && dh < 3.6 && dunkRange(m) > 0 && open > 0.9 && side_toward(m, hoop)) {
@@ -437,10 +443,10 @@ export class TeamAI {
         if (myDef) {
           const dd = dist2(myDef.pos.x, myDef.pos.z, p.pos.x, p.pos.z);
           const defHoop = dist2(myDef.pos.x, myDef.pos.z, hoop.x, hoop.z);
-          overplay = defHoop > dHoop - 0.2 || dd > 2.6;
+          overplay = defHoop > dHoop - 0.2 || dd > 3.4;
         }
         const paintBusy = g.onCourt(this.team).some((m) => m !== p && dist2(m.pos.x, m.pos.z, hoop.x, hoop.z) < 2.6);
-        const chance = (overplay ? 0.22 : 0.025) * (0.6 + p.r.inside / 150);
+        const chance = (overplay ? 0.14 : 0.012) * (0.6 + p.r.inside / 150);
         if (!paintBusy && g.rng.chance(chance)) {
           ai.mode = 'cut';
           ai.cutT = 0;
