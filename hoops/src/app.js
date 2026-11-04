@@ -43,6 +43,11 @@ export class App {
     window.addEventListener('keydown', unlock);
     this.input.on((type) => { if (type === 'activity') unlock(); });
 
+    // 切到別的分頁時自動暫停
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.game && !this.demo && !this.paused && !this.screen && this.timeScale <= 1) this.pause();
+    });
+
     this.startDemo();
     this.go('title');
     this.exposeDebug();
