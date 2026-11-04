@@ -4943,7 +4943,7 @@
  "song": {
   "sections": [
    {
-    "id": "smw28z23w1",
+    "id": "smw29f5jm1",
     "type": "intro",
     "bars": 4,
     "clips": {
@@ -4955,7 +4955,7 @@
     }
    },
    {
-    "id": "smw28z23w2",
+    "id": "smw29f5jm2",
     "type": "verse",
     "bars": 8,
     "clips": {
@@ -4967,7 +4967,7 @@
     }
    },
    {
-    "id": "smw28z23w3",
+    "id": "smw29f5jm3",
     "type": "chorus",
     "bars": 8,
     "clips": {
@@ -4979,7 +4979,7 @@
     }
    },
    {
-    "id": "smw28z23w4",
+    "id": "smw29f5jm4",
     "type": "outro",
     "bars": 4,
     "clips": {

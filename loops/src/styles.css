@@ -292,7 +292,7 @@ h2 { font-size: 17px; margin: 0; }
 .toast.error { border-color: var(--danger); }
 @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } }
 
-.help { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 18px; width: min(92vw, 460px); }
+.help { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 18px; width: min(92vw, 460px); max-height: 88vh; overflow: auto; }
 .help::backdrop { background: rgba(5, 6, 20, 0.7); }
 .help ol { padding-left: 20px; margin: 12px 0; display: grid; gap: 8px; }
 .help .btn { width: 100%; margin-top: 8px; }

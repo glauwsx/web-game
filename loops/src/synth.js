@@ -147,8 +147,8 @@ function vibrato(R, o, t, end, rate, cents, delay = 0.25) {
 
 const BASE_KIT = {
   kick: { f0: 150, f1: 48, pd: 0.07, decay: 0.42, lvl: 0.95, drive: 1.4, click: 0.18, lp: 0 },
-  snare: { tone: 190, toneLvl: 0.3, toneDecay: 0.08, noiseLvl: 0.42, noiseDecay: 0.16, hp: 1200, lp: 9000, wet: 0.12 },
-  clap: { lvl: 0.42, decay: 0.16, bp: 1300, wet: 0.2 },
+  snare: { tone: 190, toneLvl: 0.3, toneDecay: 0.08, noiseLvl: 0.42, noiseDecay: 0.16, hp: 1200, lp: 9000, wet: 0.2 },
+  clap: { lvl: 0.42, decay: 0.16, bp: 1300, wet: 0.32 },
   hatC: { hp: 7500, decay: 0.045, lvl: 0.2, lp: 14000 },
   hatO: { hp: 7000, decay: 0.25, lvl: 0.13, lp: 13000 },
   rim: { f: 1700, lvl: 0.24 },
@@ -161,28 +161,28 @@ const BASE_KIT = {
 const KITS = {
   lofi: {
     kick: { f0: 118, f1: 46, pd: 0.08, decay: 0.4, lvl: 0.95, drive: 1.8, click: 0.08, lp: 2400 },
-    snare: { tone: 180, toneLvl: 0.25, toneDecay: 0.09, noiseLvl: 0.4, noiseDecay: 0.17, hp: 1100, lp: 5200, wet: 0.18 },
+    snare: { tone: 180, toneLvl: 0.25, toneDecay: 0.09, noiseLvl: 0.4, noiseDecay: 0.17, hp: 1100, lp: 5200, wet: 0.3 },
     hatC: { hp: 6000, decay: 0.04, lvl: 0.17, lp: 8500 },
     hatO: { hp: 6000, decay: 0.22, lvl: 0.11, lp: 8000 },
     rim: { f: 1400, lvl: 0.22 },
   },
   house: {
     kick: { f0: 165, f1: 50, pd: 0.06, decay: 0.45, lvl: 1, drive: 1.5, click: 0.2, lp: 0 },
-    clap: { lvl: 0.45, decay: 0.18, bp: 1250, wet: 0.22 },
+    clap: { lvl: 0.45, decay: 0.18, bp: 1250, wet: 0.35 },
     hatO: { hp: 7500, decay: 0.2, lvl: 0.14, lp: 14000 },
   },
   synthwave: {
     kick: { f0: 140, f1: 45, pd: 0.08, decay: 0.5, lvl: 1, drive: 1.3, click: 0.12, lp: 0 },
-    bigsnare: { tone: 170, toneLvl: 0.32, toneDecay: 0.12, noiseLvl: 0.42, noiseDecay: 0.3, hp: 900, lp: 8000, wet: 0.75 },
+    bigsnare: { tone: 170, toneLvl: 0.32, toneDecay: 0.12, noiseLvl: 0.42, noiseDecay: 0.3, hp: 900, lp: 8000, wet: 1.5 },
   },
   rock: {
     kick: { f0: 135, f1: 55, pd: 0.05, decay: 0.32, lvl: 0.95, drive: 1.6, click: 0.3, lp: 0 },
-    snare: { tone: 200, toneLvl: 0.34, toneDecay: 0.1, noiseLvl: 0.45, noiseDecay: 0.2, hp: 1000, lp: 10000, wet: 0.22 },
+    snare: { tone: 200, toneLvl: 0.34, toneDecay: 0.1, noiseLvl: 0.45, noiseDecay: 0.2, hp: 1000, lp: 10000, wet: 0.35 },
     crash: { lvl: 0.14, decay: 1.8 },
   },
   trap: {
     kick: { f0: 170, f1: 52, pd: 0.045, decay: 0.28, lvl: 0.95, drive: 2, click: 0.22, lp: 0 },
-    clap: { lvl: 0.48, decay: 0.2, bp: 1400, wet: 0.25 },
+    clap: { lvl: 0.48, decay: 0.2, bp: 1400, wet: 0.4 },
     hatC: { hp: 8500, decay: 0.035, lvl: 0.18, lp: 16000 },
     snare: { tone: 210, toneLvl: 0.25, toneDecay: 0.06, noiseLvl: 0.36, noiseDecay: 0.1, hp: 1500, lp: 11000, wet: 0.1 },
   },

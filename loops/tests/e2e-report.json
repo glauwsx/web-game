@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-04T15:11:06.074Z",
+  "date": "2026-11-04T15:16:32.990Z",
   "passed": 35,
   "failed": 0,
   "results": [
@@ -46,7 +46,7 @@
     {
       "name": "量化：切換的片段從小節線開始、而且從片段開頭播",
       "ok": true,
-      "detail": "點擊 2.479s → 開始 4.372s（第 3 小節）"
+      "detail": "點擊 2.528s → 開始 4.412s（第 3 小節）"
     },
     {
       "name": "混音：靜音和獨奏生效",
@@ -86,7 +86,7 @@
     {
       "name": "WAV：不是靜音",
       "ok": true,
-      "detail": "RMS -11.9 dBFS"
+      "detail": "RMS -12.0 dBFS"
     },
     {
       "name": "WAV：沒有任何取樣點碰到滿格",
@@ -101,7 +101,7 @@
     {
       "name": "匯出：畫面顯示結果",
       "ok": true,
-      "detail": "完成：我的歌.wav・長度 0:24.9・峰值 -1.5 dBFS・4.2 MB（花了 13.7 秒）"
+      "detail": "完成：我的歌.wav・長度 0:24.9・峰值 -1.5 dBFS・4.2 MB（花了 13.5 秒）"
     },
     {
       "name": "分軌：drums 有發出聲音",
@@ -121,12 +121,12 @@
     {
       "name": "分軌：lead 有發出聲音",
       "ok": true,
-      "detail": "RMS -19.0 dBFS、峰值 -1.7 dBFS"
+      "detail": "RMS -18.8 dBFS、峰值 -1.7 dBFS"
     },
     {
       "name": "分軌：fx 有發出聲音",
       "ok": true,
-      "detail": "RMS -27.6 dBFS、峰值 -2.1 dBFS"
+      "detail": "RMS -26.9 dBFS、峰值 -2.0 dBFS"
     },
     {
       "name": "存檔：專案 JSON 可以完整讀回",

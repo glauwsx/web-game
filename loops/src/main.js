@@ -159,6 +159,8 @@ function renderMeta() {
 
 function generate(genre, seed, { quiet = false } = {}) {
   seed = String(seed || randomSeed()).slice(0, 12);
+  // 錄音中換片段庫：先把錄到的存起來，避免新舊片段混在一起
+  if (engine.recording !== 'idle') engine.stopRecording();
   state.bank = generateBank({ genre, seed });
   if (!state.stats.genres.includes(genre)) {
     state.stats.genres.push(genre);
@@ -176,6 +178,7 @@ function generate(genre, seed, { quiet = false } = {}) {
 
 function regenTrack(track) {
   const seed = randomSeed();
+  if (engine.recording !== 'idle') engine.stopRecording();
   state.bank = regenerateTrack(state.bank, track, seed);
   state.stats.trackRegens += 1;
   saveProgress();
@@ -847,7 +850,11 @@ function bind() {
   });
   engine.on('songEnd', () => { setPlayingUI(); });
   // 播放中每隔一段時間檢查一次「同時播放」類的挑戰
-  setInterval(() => { if (engine.mode === 'live') checkGoals(); }, 1000);
+  setInterval(() => {
+    if (engine.mode === 'live') checkGoals();
+    // 挑戰面板看得到的時候（電腦版一直看得到），順便更新進度文字
+    if (engine.mode !== 'stopped' && $('#goals').offsetParent !== null) renderGoals();
+  }, 1000);
 }
 
 function boot() {
