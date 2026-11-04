@@ -236,6 +236,11 @@ try {
   await m.evaluate(() => window.__loops.autoArrange());
   await m.tap('.tab[data-tab="song"]');
   await m.waitForTimeout(500);
+  await m.tap('#btn-song-play');
+  await m.waitForFunction(() => { const p = window.__loops.engine.position(); return p && !p.waiting && p.mode === 'song' && p.frac > 0.5; }, null, { timeout: 15000 });
+  const mpos = await m.evaluate(() => window.__loops.engine.position());
+  check('手機：播放整首歌', mpos.mode === 'song' && mpos.section === 0, `第 ${mpos.bar + 1} 小節`);
+  await m.waitForTimeout(3500);
   await m.screenshot({ path: path.join(SHOTS, 'mobile-song.png') });
   await m.tap('.tab[data-tab="goals"]');
   await m.waitForTimeout(300);

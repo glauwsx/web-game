@@ -536,7 +536,9 @@ function updateRecButton() {
 // ───────────────────────── 畫面更新（每一格畫面） ─────────────────────────
 
 let energy = 0;
+let smoothLoud = 0;
 let lastBeatKey = '';
+let lastNowSection = null;
 
 function frame() {
   const pos = engine.position();
@@ -587,7 +589,19 @@ function frame() {
     if (stopEl) stopEl.classList.toggle('active', !!tp);
   }
 
-  // 編曲時間軸
+  // 編曲時間軸（播到哪一段就捲到哪一段）
+  const nowSec = playing && pos.mode === 'song' ? pos.section : null;
+  if (nowSec !== lastNowSection) {
+    lastNowSection = nowSec;
+    const card = nowSec === null ? null : $('#timeline').children[nowSec];
+    const wrap = $('.timeline-wrap');
+    if (card && wrap) {
+      const left = card.offsetLeft - wrap.offsetLeft;
+      if (left < wrap.scrollLeft || left + card.offsetWidth > wrap.scrollLeft + wrap.clientWidth) {
+        wrap.scrollTo({ left: Math.max(0, left - 12), behavior: 'smooth' });
+      }
+    }
+  }
   const cards = $('#timeline').children;
   for (let i = 0; i < cards.length; i++) {
     const c = cards[i];
@@ -607,11 +621,14 @@ function frame() {
   const lvl = engine.mode === 'stopped' ? 0 : engine.level();
   const db = lvl > 0 ? 20 * Math.log10(lvl) : -100;
   const loud = Math.max(0, Math.min(1, (db + 36) / 30));
+  smoothLoud += (loud - smoothLoud) * 0.05;
   const layers = playing ? TRACK_IDS.filter((t) => pos.plan.tracks[t] && (engine.gains[t] ?? 1) > 0).length / TRACK_IDS.length : 0;
-  const target = engine.mode === 'stopped' ? 0 : 0.6 * loud + 0.4 * layers;
-  energy = Math.max(target, energy * 0.94);
-  $('#energy-fill').style.width = `${(energy * 100).toFixed(1)}%`;
-  const label = engine.mode === 'stopped' ? '能量' : energy < 0.35 ? '能量：暖身中' : energy < 0.6 ? '能量：有感覺了' : energy < 0.85 ? '能量：很嗨！' : '能量：火力全開！';
+  const target = engine.mode === 'stopped' ? 0 : 0.45 * smoothLoud + 0.55 * layers;
+  energy += (target - energy) * 0.08;
+  const bounce = engine.mode === 'stopped' ? 0 : 0.3 * (loud - smoothLoud);
+  const shown = Math.max(0, Math.min(1, energy + bounce));
+  $('#energy-fill').style.width = `${(shown * 100).toFixed(1)}%`;
+  const label = engine.mode === 'stopped' ? '能量' : energy < 0.45 ? '能量：暖身中' : energy < 0.65 ? '能量：有感覺了' : energy < 0.85 ? '能量：很嗨！' : '能量：火力全開！';
   const le = $('#energy-label');
   if (le.textContent !== label) le.textContent = label;
   $('#energy').classList.toggle('hot', energy >= 0.85);

@@ -210,7 +210,7 @@ const DRUM_GAIN = {
   tomH: 0.63, tomM: 0.63, tomL: 0.63, crash: 1,
 };
 const KIT_GAIN = {
-  lofi: { hatC: 0.8, hatO: 0.9 },
+  lofi: { hatC: 1.05, hatO: 1.0 },
   trap: { hatC: 1.15, snare: 1.3 },
   chip: { kick: 1.6, snare: 0.8, hatC: 1.0, hatO: 1.3, clap: 1.4 },
 };
@@ -569,7 +569,7 @@ export function playChordNote(R, out, voice, t, dur, midi, vel, pan = 0) {
       const amp = gainNode(ctx);
       const end = adsr(amp.gain, t, dur, 0.002, 0.08, 0.55, 0.03, 0.07 * vel);
       const o = osc(ctx, 'pulse25', f, t, end, R);
-      o.connect(amp).connect(dest);
+      o.connect(filt(ctx, 'lowpass', 3800, 0.6)).connect(amp).connect(dest);
       break;
     }
     default:
@@ -623,7 +623,7 @@ export function playLead(R, out, voice, t, dur, midi, vel) {
       const o2 = osc(ctx, 'sawtooth', f, t, end, R);
       o1.detune.value = -7;
       o2.detune.value = 7;
-      const lp = filt(ctx, 'lowpass', 3000, 1);
+      const lp = filt(ctx, 'lowpass', 2700, 1);
       o1.connect(lp);
       o2.connect(lp);
       lp.connect(amp).connect(out.dry);
@@ -664,7 +664,7 @@ export function playLead(R, out, voice, t, dur, midi, vel) {
       const amp = gainNode(ctx);
       const end = adsr(amp.gain, t, dur, 0.002, 0.12, 0.7, 0.04, 0.075 * vel);
       const o = osc(ctx, 'pulse12', f, t, end, R);
-      o.connect(amp).connect(out.dry);
+      o.connect(filt(ctx, 'lowpass', 4200, 0.6)).connect(amp).connect(out.dry);
       vibrato(R, o, t, end, 6, 15, 0.18);
       break;
     }
@@ -679,7 +679,7 @@ export function playFx(R, out, kind, t, dur, midi, vel, extra = {}) {
   const ctx = R.ctx;
   switch (kind) {
     case 'riser': {
-      const end = t + dur + 0.05;
+      const end = t + dur + 0.15;
       const n = noiseSrc(R, t, end);
       const bp = filt(ctx, 'bandpass', 300, 2.5);
       bp.frequency.setValueAtTime(300, t);
@@ -724,7 +724,7 @@ export function playFx(R, out, kind, t, dur, midi, vel, extra = {}) {
       break;
     }
     case 'revcym': {
-      const end = t + dur + 0.05;
+      const end = t + dur + 0.15;
       const n = noiseSrc(R, t, end);
       const g = gainNode(ctx);
       g.gain.setValueAtTime(0.0001, t);
@@ -771,7 +771,7 @@ export function playFx(R, out, kind, t, dur, midi, vel, extra = {}) {
     }
     case 'swell': {
       const f = midiToFreq(midi);
-      const end = t + dur + 0.05;
+      const end = t + dur + 0.15;
       const o1 = osc(ctx, 'sawtooth', f, t, end, R);
       const o2 = osc(ctx, 'sawtooth', f, t, end, R);
       o2.detune.value = 12;

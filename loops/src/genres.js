@@ -15,8 +15,8 @@ export const GENRES = {
     fxKinds: ['crackle', 'rain', 'sparkle', 'swell', 'chop', 'riser', 'impact', 'revcym'],
     sound: {
       kit: 'lofi', bass: 'round', chords: 'ep', lead: 'flute',
-      lowpass: 7200, reverb: 0.26, delay: 0.16, wow: 9, duck: 0,
-      trims: { drums: 2.4, bass: 0.36, chords: 1.08, lead: 1.32, fx: 1.6 },
+      lowpass: 9500, reverb: 0.26, delay: 0.16, wow: 9, duck: 0,
+      trims: { drums: 2.4, bass: 0.36, chords: 0.9, lead: 1.5, fx: 1.6 },
     },
   },
   house: {

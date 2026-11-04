@@ -190,7 +190,7 @@ h2 { font-size: 17px; margin: 0; }
 /* ───────── 編曲 ───────── */
 .song-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 .song-controls .btn { flex: 1; }
-.timeline-wrap { margin: 12px -12px 0; padding: 0 12px 6px; overflow-x: auto; }
+.timeline-wrap { position: relative; margin: 12px -12px 0; padding: 0 12px 6px; overflow-x: auto; }
 .timeline { display: flex; gap: 6px; min-height: 96px; align-items: stretch; }
 .timeline .empty { color: var(--muted); font-size: 13px; padding: 20px 4px; }
 .sec {
@@ -281,7 +281,7 @@ h2 { font-size: 17px; margin: 0; }
 
 /* ───────── 提示訊息 ───────── */
 .toasts {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tab-h) + 12px + env(safe-area-inset-bottom));
+  position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 104px);
   z-index: 40; display: flex; flex-direction: column; gap: 6px; align-items: center; width: min(92vw, 420px); pointer-events: none;
 }
 .toast {
@@ -290,7 +290,7 @@ h2 { font-size: 17px; margin: 0; }
 }
 .toast.badge { border-color: var(--accent); background: linear-gradient(180deg, #3b3266, #2a2558); }
 .toast.error { border-color: var(--danger); }
-@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
+@keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } }
 
 .help { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 18px; width: min(92vw, 460px); }
 .help::backdrop { background: rgba(5, 6, 20, 0.7); }
@@ -309,7 +309,7 @@ h2 { font-size: 17px; margin: 0; }
   body { font-size: 15px; }
   .app { padding-bottom: 24px; }
   .tabbar { display: none; }
-  .toasts { bottom: 20px; }
+  .toasts { top: auto; bottom: 20px; }
   .top-row { gap: 12px; }
   .top { display: flex; align-items: center; gap: 16px; }
   .top-row + .top-row { margin-top: 0; flex: 1; }
