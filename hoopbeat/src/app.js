@@ -139,6 +139,16 @@ export class HoopbeatApp extends App {
     }).install(this.game);
     hb.conductor = conductor;
     hb.bridge = bridge;
+    // 鍵盤：用按鍵事件的時間判定（比每一幀讀一次精確）
+    const KEY_OF = { shot: 'KeyJ', steal: 'KeyJ', pass: 'KeyK', dribble: 'KeyL', block: 'KeyI' };
+    bridge.humanTime = (p, kind, edge) => {
+      if (bridge.headless) return null;
+      const h = this.game.humans.find((x) => x.player === p);
+      if (!h || h.id !== 'kb') return null;
+      const map = edge === 'up' ? this.input.keyUpAt : this.input.keyDownAt;
+      const ts = map.get(KEY_OF[kind]);
+      return ts === undefined ? null : this.stage.audibleNow(ts);
+    };
     if (!fast) this.stage.play(conductor, 'home');
     this.beatHud.setup(bridge, this.game);
     this.beatHud.show(true);

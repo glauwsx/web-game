@@ -38,6 +38,14 @@ export class BeatBridge {
     this.lastOffense = -1;
     this.stats = [0, 1].map(() => ({ perfect: 0, great: 0, good: 0, miss: 0, rush: 0, boosts: 0, judged: 0, badPass: 0, fumble: 0 }));
     this.djEnabled = [true, true];
+    this.humanTime = null; // (p, kind, edge) => 音訊時間或 null：鍵盤的精確按鍵時間
+  }
+
+  // 真人按鍵的時間：有精確的按鍵時間就用，沒有就用這一步的時間
+  pressTime(p, kind, edge = 'down') {
+    const t = this.humanTime ? this.humanTime(p, kind, edge) : null;
+    const now = this.now();
+    return t !== null && t !== undefined && t <= now + 0.005 && now - t < 0.12 ? t : now;
   }
 
   // 加速模擬時改用模擬時間（不發聲）；回到正常速度時改回音訊時鐘
@@ -162,11 +170,11 @@ export class BeatBridge {
     if (kind === 'shot') {
       const ok = fn();
       const a = p.action;
-      if (ok && a && a.type === 'shot' && (a.kind === 'layup' || a.kind === 'dunk')) a.beat = this.judgeAt(p, 'shot', this.now());
+      if (ok && a && a.type === 'shot' && (a.kind === 'layup' || a.kind === 'dunk')) a.beat = this.judgeAt(p, 'shot', this.pressTime(p, 'shot'));
       return ok;
     }
     if (this.game.phase !== 'live' && kind !== 'pass') return fn();
-    const j = this.game.phase === 'live' ? this.judgeAt(p, kind, this.now()) : null;
+    const j = this.game.phase === 'live' ? this.judgeAt(p, kind, this.pressTime(p, kind)) : null;
     this.cur = j;
     const ok = fn();
     this.cur = null;
@@ -299,7 +307,7 @@ export class BeatBridge {
   shotTiming(p, a) {
     let j = a.beat || null;
     if (!j && (a.kind === 'jump' || a.kind === 'ft')) {
-      const t = !p.human && a.beatReleaseTime != null ? a.beatReleaseTime : this.now();
+      const t = !p.human && a.beatReleaseTime != null ? a.beatReleaseTime : p.human ? this.pressTime(p, 'shot', 'up') : this.now();
       j = this.judgeAt(p, 'shot', t, { strongOnly: true, rush: !!p.beatRush && !p.human });
     }
     p.beatRush = false;

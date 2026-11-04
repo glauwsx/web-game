@@ -11,7 +11,7 @@ import { Conductor } from '../music/conductor.js';
 import { computeFeatures } from '../music/features.js';
 import { explain, headline } from '../music/effects.js';
 import { arrangementChecks } from '../music/quality.js';
-import { saveSong, newSongId, loadSongs } from '../music/library.js';
+import { saveSong, newSongId, loadSongs, songFromProjectJson } from '../music/library.js';
 
 const BAR_CHOICES = [4, 8, 16];
 
@@ -149,6 +149,7 @@ export function songLabScreen(app, opts = {}) {
       </div>
       <div class="lab-arr-btns">
         <span class="btn primary" data-nav data-key="save" data-act="save">💾 存成「${esc(st.name)}」${opts.back === 'songs' ? '並帶去比賽' : ''}</span>
+        <span class="btn" data-nav data-key="import" data-act="import">📂 匯入 Loop 工坊的專案檔</span>
         <span class="btn" data-nav data-key="back" data-act="back">返回</span>
       </div>`;
     renderInfo();
@@ -249,6 +250,9 @@ export function songLabScreen(app, opts = {}) {
       case 'save':
         save();
         return;
+      case 'import':
+        fileInput.click();
+        return;
       case 'back':
         leave();
         return;
@@ -276,6 +280,35 @@ export function songLabScreen(app, opts = {}) {
     stopPlay();
     app.go(opts.back || 'menu');
   };
+
+  // 匯入 Loop 工坊（loops/）匯出的 .json 專案
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.json,application/json';
+  fileInput.style.display = 'none';
+  root.appendChild(fileInput);
+  fileInput.addEventListener('change', async () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    try {
+      const song = songFromProjectJson(await f.text());
+      st.bank = song.bank;
+      st.genre = song.bank.genre;
+      st.seed = song.bank.seed;
+      st.bpm = song.bpm;
+      st.sections = song.song.sections;
+      st.name = song.name;
+      const ch = st.sections.find((s) => s.type === 'chorus') || st.sections[0];
+      for (const t of TRACK_IDS) st.live[t] = ch ? ch.clips[t] ?? null : null;
+      st.sel = -1;
+      restartIfPlaying();
+      app.toast(`已匯入「${song.name}」`, 'ok');
+      render();
+    } catch (e) {
+      app.toast(e.message || '匯入失敗', 'warn');
+    }
+    fileInput.value = '';
+  });
 
   root.addEventListener('click', (ev) => {
     const e = ev.target.closest('[data-act]');

@@ -42,6 +42,8 @@ function shapeStick(x, y) {
 export class InputManager {
   constructor() {
     this.keys = new Set();
+    this.keyDownAt = new Map(); // HOOPBEAT
+    this.keyUpAt = new Map(); // HOOPBEAT
     this.prevKeys = new Set();
     this.devices = new Map(); // id -> device
     this.listeners = [];
@@ -51,10 +53,11 @@ export class InputManager {
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) e.preventDefault();
       this.keys.add(e.code);
+      if (!e.repeat) this.keyDownAt.set(e.code, e.timeStamp); // HOOPBEAT: 拍點判定用的精確按鍵時間
       this.lastActivity = performance.now();
       this.emitActivity();
     });
-    window.addEventListener('keyup', (e) => { this.keys.delete(e.code); });
+    window.addEventListener('keyup', (e) => { this.keys.delete(e.code); this.keyUpAt.set(e.code, e.timeStamp); }); // HOOPBEAT
     window.addEventListener('blur', () => this.keys.clear());
     window.addEventListener('gamepadconnected', () => this.poll());
     window.addEventListener('gamepaddisconnected', () => this.poll());
