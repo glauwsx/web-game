@@ -204,6 +204,21 @@ try {
   await page.click('#btn-load-local');
   const afterLoad = await page.evaluate(() => window.__loops.state.song.sections.length);
   check('存檔：存到瀏覽器再讀回來', afterLoad === 3, `${afterLoad} 段`);
+  // 下載專案檔 → 清空 → 開啟專案檔
+  const [jsonDl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-save-file')]);
+  const jsonPath = path.join(os.tmpdir(), `loops-e2e-${Date.now()}.json`);
+  await jsonDl.saveAs(jsonPath);
+  await page.click('#btn-clear-song');
+  await page.setInputFiles('#file-input', jsonPath);
+  await page.waitForFunction(() => window.__loops.state.song.sections.length === 3, null, { timeout: 5000 });
+  const reopened = await page.evaluate(() => window.__loops.state.song.sections.map((s) => s.type).join(','));
+  check('存檔：下載專案檔再開啟', reopened === 'intro,verse,chorus', reopened);
+  fs.unlinkSync(jsonPath);
+  // 載入示範歌
+  await page.click('#btn-demo');
+  await page.waitForFunction(() => window.__loops.state.song.sections.length === 4, null, { timeout: 5000 });
+  const demo = await page.evaluate(() => ({ name: window.__loops.state.name, bars: window.__loops.state.song.sections.reduce((n, s) => n + s.bars, 0) }));
+  check('示範歌：可以載入', demo.bars === 24, `${demo.name}・${demo.bars} 小節`);
   const badges = await page.evaluate(() => Object.keys(window.__loops.state.unlocked));
   check('挑戰：有解鎖徽章', badges.length >= 4, badges.join(', '));
   check('電腦：整個流程 console 沒有錯誤', errors.length === 0, errors.join(' | '));
