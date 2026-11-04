@@ -72,7 +72,9 @@ export class PlayerModel {
     root.add(body);
     this.body = body;
     this.scale = player.height / REF_H;
-    body.scale.setScalar(this.scale);
+    // 體型：中鋒、大前鋒比較壯
+    const build = { PG: 0.97, SG: 1.0, SF: 1.04, PF: 1.1, C: 1.14 }[player.pos0] || 1;
+    body.scale.set(this.scale * build, this.scale, this.scale * build);
 
     const pelvis = new THREE.Group();
     pelvis.position.y = L.hipY;

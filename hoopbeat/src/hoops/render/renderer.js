@@ -53,9 +53,36 @@ export class GameRenderer {
     }
   }
 
+  // 用一個只有燈光方塊的小場景產生環境貼圖，讓地板與籃框有柔和的反光（只算一次）
+  buildEnvironment() {
+    const env = new THREE.Scene();
+    env.background = new THREE.Color('#06080d');
+    const lampMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 4.6, 4.0) });
+    for (let i = -3; i <= 3; i++) {
+      for (const z of [-5, 5]) {
+        const l = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 1.0), lampMat);
+        l.position.set(i * 4.5, 14, z);
+        env.add(l);
+      }
+    }
+    const standMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.12, 0.13, 0.18) });
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(60, 10, 1), standMat);
+    wall.position.set(0, 4, -16);
+    env.add(wall);
+    const wall2 = wall.clone();
+    wall2.position.z = 16;
+    env.add(wall2);
+    const pm = new THREE.PMREMGenerator(this.renderer);
+    const rt = pm.fromScene(env, 0.04);
+    pm.dispose();
+    this.scene.environment = rt.texture;
+    this.scene.environmentIntensity = 0.55;
+  }
+
   buildStatic() {
     const s = this.scene;
-    const hemi = new THREE.HemisphereLight('#dfe8ff', '#3b2a1c', 1.0);
+    try { this.buildEnvironment(); } catch (e) { /* 舊顯卡不支援時略過 */ }
+    const hemi = new THREE.HemisphereLight('#dfe8ff', '#3b2a1c', 0.75);
     s.add(hemi);
     const sun = new THREE.DirectionalLight('#fff4e3', 2.3);
     sun.position.set(3, 22, 9);
@@ -314,7 +341,7 @@ export class GameRenderer {
     if (this.floor) { s.remove(this.floor); this.floor.material.map.dispose(); }
     const home = game.teams[0].data, away = game.teams[1].data;
     const tex = makeCourtTexture(home, away);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_EXTENT.x * 2, FLOOR_EXTENT.z * 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.42, metalness: 0.0 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_EXTENT.x * 2, FLOOR_EXTENT.z * 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.34, metalness: 0.0, envMapIntensity: 1.1 }));
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     s.add(floor);
@@ -341,6 +368,24 @@ export class GameRenderer {
     }
     this.cam.x = 0;
     this.lastShot = [null, null];
+    this.recolorCrowd(home, away);
+  }
+
+  // 觀眾衣服顏色：主隊球迷最多
+  recolorCrowd(home, away) {
+    const rng = new RNG(home.key.length * 31 + away.key.length);
+    const neutrals = ['#2c3e50', '#7f8c8d', '#ecf0f1', '#34495e', '#95a5a6', '#5d4037'];
+    const col = new THREE.Color();
+    const cr = this.crowd;
+    for (let i = 0; i < cr.seats.length; i++) {
+      const r = rng.next();
+      let c;
+      if (r < 0.38) c = rng.chance(0.6) ? home.dark.jersey : home.dark.trim;
+      else if (r < 0.55) c = rng.chance(0.6) ? away.dark.jersey : away.dark.trim;
+      else c = neutrals[rng.int(0, neutrals.length - 1)];
+      cr.bodies.setColorAt(i, col.set(c).multiplyScalar(0.38));
+    }
+    cr.bodies.instanceColor.needsUpdate = true;
   }
 
   onEvents(events, game) {
@@ -399,7 +444,13 @@ export class GameRenderer {
         const m = this.models.get(p);
         ri.ring.position.x = p.pos.x; ri.ring.position.z = p.pos.z;
         ri.ring.material.color.set(HUMAN_COLORS[hm.slot % HUMAN_COLORS.length]);
-        ri.label.position.set(p.pos.x, p.y + p.height * 1.18 + 0.25, p.pos.z);
+        // 兩位玩家靠得很近時，把後面那位的標籤往上疊，避免重疊
+        let lift = 0;
+        for (let j = 0; j < i; j++) {
+          const o = game.humans[j] && game.humans[j].player;
+          if (o && o.onCourt && Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z) < 1.6) lift += 0.45;
+        }
+        ri.label.position.set(p.pos.x, p.y + p.height * 1.18 + 0.25 + lift, p.pos.z);
         void m;
       }
     }

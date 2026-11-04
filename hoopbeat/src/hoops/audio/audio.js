@@ -264,6 +264,60 @@ export class AudioSystem {
     n.f.frequency.exponentialRampToValueAtTime(320, t + 0.9);
   }
 
+  // ---------- 選單音樂：用合成器即時演奏的循環 ----------
+  startMusic() {
+    if (!this.ctx || this.musicOn) return;
+    const c = this.ctx;
+    this.musicOn = true;
+    if (!this.musicBus) {
+      this.musicBus = c.createGain();
+      this.musicBus.connect(this.master);
+    }
+    this.musicBus.gain.cancelScheduledValues(c.currentTime);
+    this.musicBus.gain.setValueAtTime(0.0001, c.currentTime);
+    this.musicBus.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 1.5);
+    this.step = 0;
+    this.nextNote = c.currentTime + 0.1;
+    this.musicTimer = setInterval(() => this.scheduleMusic(), 60);
+  }
+
+  stopMusic() {
+    if (!this.musicOn) return;
+    this.musicOn = false;
+    clearInterval(this.musicTimer);
+    if (this.ctx && this.musicBus) {
+      const t = this.ctx.currentTime;
+      this.musicBus.gain.cancelScheduledValues(t);
+      this.musicBus.gain.setValueAtTime(this.musicBus.gain.value, t);
+      this.musicBus.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    }
+  }
+
+  scheduleMusic() {
+    const c = this.ctx;
+    const stepDur = 60 / 98 / 4;
+    // A 小調：Am - F - C - G
+    const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+    const bassPat = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0];
+    const kickPat = [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0];
+    const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    while (this.nextNote < c.currentTime + 0.25) {
+      const t = this.nextNote;
+      const st = this.step % 16;
+      const bar = Math.floor(this.step / 16) % 4;
+      const ch = chords[bar];
+      const d = this.musicBus;
+      if (kickPat[st]) this.tone(t, 110, 0.18, { gain: 0.5, slide: 42, dest: d });
+      if (st === 4 || st === 12) this.noise(t, 0.12, { freq: 1900, q: 0.8, gain: 0.22, dest: d });
+      if (st % 2 === 0) this.noise(t, 0.03, { type: 'highpass', freq: 7000, q: 0.5, gain: st % 4 === 2 ? 0.1 : 0.05, dest: d });
+      if (bassPat[st]) this.tone(t, mtof(ch[0] - 24 + (st === 10 ? 7 : 0)), stepDur * 1.6, { type: 'sawtooth', gain: 0.12, dest: d });
+      if (st === 0) for (const n of ch) this.tone(t, mtof(n), stepDur * 14, { type: 'triangle', gain: 0.035, attack: 0.2, dest: d });
+      if (st === 7 || st === 15) this.tone(t, mtof(ch[(this.step >> 4) % 3] + 12), stepDur * 1.5, { type: 'square', gain: 0.025, dest: d });
+      this.nextNote += stepDur;
+      this.step++;
+    }
+  }
+
   // 依比賽事件播放
   onEvents(events, game) {
     if (!this.ctx) return;

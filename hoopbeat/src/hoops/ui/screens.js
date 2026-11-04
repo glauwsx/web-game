@@ -123,6 +123,10 @@ export function mainMenu(app) {
       label: '音量', desc: '音效與觀眾聲的總音量。', values: [0, 0.2, 0.4, 0.6, 0.8, 1], get: () => app.settings.volume,
       set: (v) => { app.settings.volume = v; app.audio.setVolume(v); app.saveSettings(); }, format: (v) => `${Math.round(v * 100)}%`,
     },
+    {
+      label: '選單音樂', desc: '選單畫面的背景音樂（全部用 Web Audio 即時合成）。', values: [true, false], get: () => app.settings.music,
+      set: (v) => { app.settings.music = v; app.saveSettings(); app.updateMusic(); }, format: (v) => (v ? '開' : '關'),
+    },
   ]);
   panel.appendChild(list.el);
   panel.appendChild(list.desc);
@@ -455,7 +459,7 @@ export function boxScoreScreen(app, opts = {}) {
     if (m) root.querySelector('.mvp-wrap').innerHTML = `<div class="mvp">★ 本場最有價值球員：#${m.number} ${esc(m.name)}　${m.stats.pts} 分 ${m.stats.reb} 籃板 ${m.stats.ast} 助攻</div>`;
   }
   const items = final
-    ? [{ label: '再來一場', action: () => app.startMatch() }, { label: '換隊重選', action: () => app.go('teams') }, { label: '回主選單', action: () => app.quitToMenu() }]
+    ? [{ label: '再來一場', action: () => app.startMatch() }, { label: '換隊重選', action: () => { app.startDemo(); app.go('teams'); } }, { label: '回主選單', action: () => app.quitToMenu() }]
     : [{ label: '返回', action: () => app.go(opts.back === 'break' ? 'break' : 'pause') }];
   const list = new MenuList(items);
   list.el.style.flexDirection = 'row';
