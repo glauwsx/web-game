@@ -294,6 +294,7 @@ const ROWS = [
   ['戰術配樂（比賽計劃）', 'dpad', '1／2／3／4'],
   ['上一段／下一段', 'lbrb', 'Q／E'],
   ['回到原曲', 'back', 'R'],
+  ['音樂面板：標準／詳細／精簡', 'rs', 'Tab'],
   ['暫停', 'start'],
 ];
 
@@ -303,6 +304,7 @@ export function helpScreen(app, opts = {}) {
     if (k === 'stick') return b === 'switch' ? 'L 搖桿' : '左搖桿';
     if (k === 'dpad') return '十字鍵 ↑↓←→';
     if (k === 'lbrb') return `${GLYPHS[b].lb}／${GLYPHS[b].rb}`;
+    if (k === 'rs') return b === 'ps' ? 'R3' : b === 'switch' ? '按 R 搖桿' : '按右搖桿';
     return GLYPHS[b][k];
   };
   const rows = ROWS.map(([label, k, kb]) => `<tr><td>${esc(label)}</td>${brands.map((b) => `<td>${esc(cell(b, k))}</td>`).join('')}<td>${esc(kb || KB[k] || '')}</td></tr>`).join('');
