@@ -742,7 +742,7 @@ export class Game {
       this.emit('whistle');
       this.message(`${foul.name} 投籃犯規`, 'foul', foul.team);
     }
-    this.emit('shot', { player: p, kind, points, timing: timing.grade, prob, human: p.human });
+    this.emit('shot', { player: p, kind, points, timing: timing.grade, prob, contest, human: p.human });
     if (kind === 'ft') {
       this.pd.state = 'flight';
       if (b.shot.ftLast) {

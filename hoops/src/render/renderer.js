@@ -341,6 +341,24 @@ export class GameRenderer {
     }
     this.cam.x = 0;
     this.lastShot = [null, null];
+    this.recolorCrowd(home, away);
+  }
+
+  // 觀眾衣服顏色：主隊球迷最多
+  recolorCrowd(home, away) {
+    const rng = new RNG(home.key.length * 31 + away.key.length);
+    const neutrals = ['#2c3e50', '#7f8c8d', '#ecf0f1', '#34495e', '#95a5a6', '#5d4037'];
+    const col = new THREE.Color();
+    const cr = this.crowd;
+    for (let i = 0; i < cr.seats.length; i++) {
+      const r = rng.next();
+      let c;
+      if (r < 0.38) c = rng.chance(0.6) ? home.dark.jersey : home.dark.trim;
+      else if (r < 0.55) c = rng.chance(0.6) ? away.dark.jersey : away.dark.trim;
+      else c = neutrals[rng.int(0, neutrals.length - 1)];
+      cr.bodies.setColorAt(i, col.set(c).multiplyScalar(0.38));
+    }
+    cr.bodies.instanceColor.needsUpdate = true;
   }
 
   onEvents(events, game) {

@@ -168,15 +168,19 @@ async function testGamepad(browser, port) {
   const meterSeen = await page.evaluate(() => window.__ev.some((e) => e.type === 'shotStart'));
   record('□/X 按住起跳、放開投籃', shot > 0 && fga1 === fga0 + 1 && meterSeen, `出手事件 ${shot} 次，出手數 ${fga0}→${fga1}`);
 
-  // 抄截
+  // 抄截（等球員可以動作再按；最多試 3 次）
   await sleep(1200);
-  const victim = await page.evaluate(() => window.__hoops.giveBallToOpponent('1P'));
-  await sleep(120);
-  await page.evaluate(() => { window.__ev.length = 0; });
-  await tapPad(page, 0, 2, 150, 500);
-  const stealTry = await page.evaluate(() => window.__ev.filter((e) => e.type === 'stealTry').map((e) => e.player));
-  const me = await page.evaluate(() => window.__hoops.humanPlayer('1P').name);
-  record('防守時 □/X 抄截', stealTry.includes(me), `${me} 對 ${victim} 出手抄截：${stealTry.join(',') || '無'}`);
+  let stealTry = [], me = '', victim = '', diag = '';
+  for (let k = 0; k < 3 && !stealTry.includes(me || '?'); k++) {
+    victim = await page.evaluate(() => window.__hoops.giveBallToOpponent('1P'));
+    try { await waitFor(page, () => { const p = window.__hoops.game.humans[0].player; return !p.action && !p.airborne && p.stealCooldown <= 0; }, null, 2000); } catch (e) { /* 下面記錄狀態 */ }
+    diag = JSON.stringify(await page.evaluate(() => { const g = window.__hoops.game; const p = g.humans[0].player; return { ph: g.phase, act: p.action && p.action.type, air: p.airborne, cd: +p.stealCooldown.toFixed(2) }; }));
+    await page.evaluate(() => { window.__ev.length = 0; });
+    await tapPad(page, 0, 2, 150, 500);
+    stealTry = await page.evaluate(() => window.__ev.filter((e) => e.type === 'stealTry').map((e) => e.player));
+    me = await page.evaluate(() => window.__hoops.humanPlayer('1P').name);
+  }
+  record('防守時 □/X 抄截', stealTry.includes(me), `${me} 對 ${victim} 出手抄截：${stealTry.join(',') || '無'}（按下前狀態 ${diag}）`);
 
   // 防守換人
   await page.evaluate(() => window.__hoops.giveBallToOpponent('1P'));
@@ -237,12 +241,11 @@ async function testAI(browser, port) {
   const teams = ['owls', 'rhinos', 'rays', 'leopards', 'scorpions', 'frogs'];
   for (let i = 0; i < GAMES; i++) {
     const home = teams[(i * 2) % 6], away = teams[(i * 2 + 1) % 6];
-    await page.evaluate(MONITOR);
     await page.evaluate(([home, away, seed]) => {
       window.__hoops.startMatch({ cpuOnly: true, home, away, quarterMinutes: 2, autoContinue: true, seed });
-      window.__hoops.setRender(false);
-      window.__hoops.setTimeScale(40);
     }, [home, away, 2024 + i]);
+    await page.evaluate(MONITOR); // 新比賽開始後才裝監看，避免讀到上一場的分數
+    await page.evaluate(() => { window.__hoops.setRender(false); window.__hoops.setTimeScale(40); });
     const t0 = Date.now();
     try {
       await waitFor(page, () => window.__hoops.game.phase === 'gameOver', null, 300000);
@@ -321,22 +324,23 @@ async function testShots(browser, port) {
   await sleep(500);
   shots.push(await snap('10-pause-menu.png'));
   await tapUntil(page, 0, 1, '');
-  // 換節
-  await page.evaluate(() => { const g = window.__hoops.game; g.setPhase('live'); g.rules.clockRunning = true; g.rules.gameClock = 0.3; g.ball.shot = null; });
-  await waitFor(page, () => window.__hoops.screen() === 'break', null, 20000);
-  await sleep(800);
+  // 換節：玩家交給電腦控制，加速把第一節打完
+  await page.evaluate(() => { window.__hoops.releaseHumans(); window.__hoops.setRender(false); window.__hoops.setTimeScale(40); });
+  await waitFor(page, () => window.__hoops.screen() === 'break', null, 120000);
+  await page.evaluate(() => { window.__hoops.setTimeScale(1); window.__hoops.setRender(true); });
+  await sleep(1200);
   shots.push(await snap('11-quarter-break.png'));
-  // 結束
-  await page.evaluate(() => {
-    const g = window.__hoops.game;
-    window.__hoops.continueBreak();
-    g.rules.period = 4; g.rules.gameClock = 0.4; g.rules.clockRunning = true;
-    if (g.rules.score[0] === g.rules.score[1]) g.rules.score[0] += 2, g.teams[0].players[0].stats.pts += 2;
-    g.setPhase('live'); g.ball.shot = null;
-    window.__hoops.setRender(true);
-  });
+  // 加速打完整場
+  await page.evaluate(() => { window.__hoops.setRender(false); window.__hoops.setTimeScale(40); });
+  for (let k = 0; k < 400; k++) {
+    const st = await page.evaluate(() => ({ ph: window.__hoops.game.phase, scr: window.__hoops.screen() }));
+    if (st.scr === 'results') break;
+    if (st.ph === 'periodBreak') await page.evaluate(() => window.__hoops.continueBreak());
+    await sleep(300);
+  }
+  await page.evaluate(() => { window.__hoops.setTimeScale(1); window.__hoops.setRender(true); });
   await waitFor(page, () => window.__hoops.screen() === 'results', null, 30000);
-  await sleep(800);
+  await sleep(1200);
   shots.push(await snap('12-box-score.png'));
   // 說明（PS 頁籤）
   await page.evaluate(() => window.__hoops.app.go('help', { back: 'menu' }));

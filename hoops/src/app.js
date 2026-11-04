@@ -9,7 +9,7 @@ import { HUD } from './ui/hud.js';
 import * as S from './ui/screens.js';
 import { emptyInput } from './sim/control.js';
 
-const DEFAULTS = { home: 'owls', away: 'rhinos', difficulty: 'normal', quarterMinutes: 3, autoSub: true, camera: 'broadcast', volume: 0.8 };
+const DEFAULTS = { home: 'owls', away: 'rhinos', difficulty: 'normal', quarterMinutes: 3, autoSub: true, camera: 'broadcast', volume: 0.8, music: true };
 
 export class App {
   constructor() {
@@ -38,7 +38,14 @@ export class App {
     this.errors = [];
 
     this.input.on((type, dev) => this.onDevice(type, dev));
-    const unlock = () => this.audio.unlock();
+    const unlock = () => {
+      const first = !this.audio.ctx;
+      this.audio.unlock();
+      if (first && this.audio.ctx) {
+        this.audio.setCrowd(this.demo ? 0.18 : 0.5);
+        this.updateMusic();
+      }
+    };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
     this.input.on((type) => { if (type === 'activity') unlock(); });
@@ -112,6 +119,14 @@ export class App {
     }
     this.hud.show(!!this.game && !this.demo && !['title', 'menu', 'teams', 'controllers', 'settings'].includes(name));
     document.body.classList.toggle('menu-open', !!this.screen);
+    this.updateMusic();
+  }
+
+  // 選單播音樂，比賽中不播
+  updateMusic() {
+    const inMenu = this.demo && ['title', 'menu', 'teams', 'controllers', 'settings', 'help'].includes(this.screenName);
+    if (inMenu && this.settings.music) this.audio.startMusic();
+    else this.audio.stopMusic();
   }
 
   closeScreens() {
@@ -157,7 +172,7 @@ export class App {
     humans.forEach((h, i) => { h.label = `${i + 1}P`; });
     this.game = new Game({
       home: getTeam(s.home), away: getTeam(s.away), quarterMinutes: s.quarterMinutes, difficulty: s.difficulty,
-      autoSub: s.autoSub, humans, seed: s.seed ?? ((Math.random() * 1e9) | 0), autoContinue: !!overrides.autoContinue,
+      autoSub: s.autoSub, humans, seed: s.seed ?? ((Math.random() * 1e9) | 0), autoContinue: !!overrides.autoContinue || humans.length === 0,
     });
     this.game.start();
     this.demo = false;
@@ -169,6 +184,7 @@ export class App {
     this.hud.setupMatch(this.game);
     this.closeScreens();
     this.hud.show(true);
+    this.audio.stopMusic();
     this.audio.setCrowd(0.5);
   }
 
@@ -204,7 +220,7 @@ export class App {
     this.paused = false;
     this.pauseReason = null;
     this.startDemo();
-    this.audio.setCrowd(0.25);
+    this.audio.setCrowd(0.18);
     this.go('menu');
   }
 
@@ -297,9 +313,7 @@ export class App {
     const ev = g.events;
     if (!ev.length) return;
     if (this.renderEnabled) this.renderer.onEvents(ev, g);
-    if (!this.demo || this.screenName === 'title' || this.screenName === 'menu') {
-      if (this.timeScale <= 1) this.audio.onEvents(ev, g);
-    }
+    if (!this.demo && this.timeScale <= 1) this.audio.onEvents(ev, g);
     if (!this.demo) {
       this.hud.onEvents(ev, g);
       for (const e of ev) {
@@ -380,6 +394,13 @@ export class App {
         g.gainBall(opp, 'debug');
         if (me.human) me.facing = Math.atan2(opp.pos.z - me.pos.z, opp.pos.x - me.pos.x);
         return opp.name;
+      },
+      // 把玩家控制的球員交還給電腦（測試加速打完比賽用）
+      releaseHumans() {
+        const g = app.game;
+        for (const h of g.humans) { if (h.player) h.player.human = null; h.player = null; }
+        g.humans.length = 0;
+        for (const t of g.teams) t.humans.length = 0;
       },
       humanPlayer(label = '1P') {
         const g = app.game;

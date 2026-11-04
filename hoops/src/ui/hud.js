@@ -102,13 +102,24 @@ export class HUD {
         const label = { perfect: '完美出手！', early: '太早', late: '太晚' }[e.timing] || '';
         this.meterLabel.textContent = label;
         this.meterLabel.style.color = e.timing === 'perfect' ? '#3ddc84' : '#ffb347';
-        this.meterTimer = 0.9;
+        this.meterTimer = 1.1;
+        this.showShotInfo(e);
+      } else if (e.type === 'shot' && e.human) {
+        this.showShotInfo(e);
       } else if (e.type === 'ftSetup') {
         this.showTicker(`${e.shooter.name} 罰球 第 ${e.index + 1} 罰／共 ${e.total} 罰`, 2.5);
       } else if (e.type === 'sub') {
         this.showTicker(`${teamFullName(game.teams[e.team].data)} 換人：${e.sub.name} 上場，${e.out.name} 下場`, 2.5);
       }
     }
+  }
+
+  // 玩家出手後顯示命中率與干擾程度，讓人知道能力值、距離、防守的影響
+  showShotInfo(e) {
+    const c = e.contest || 0;
+    const cl = e.kind === 'ft' ? '' : c < 0.2 ? '空檔' : c < 0.45 ? '輕度干擾' : c < 0.75 ? '中度干擾' : '強力干擾';
+    const kind = { jump: e.points === 3 ? '三分' : '跳投', layup: '上籃', dunk: '灌籃', ft: '罰球' }[e.kind] || '';
+    this.showTicker(`${e.player.name} ${kind}・命中率 ${Math.round(e.prob * 100)}%${cl ? '・' + cl : ''}`, 2.4);
   }
 
   update(dt, game, renderer) {
@@ -209,6 +220,13 @@ export class HUD {
         const dx = p.pos.x < 0 ? -110 : 110;
         html += `<div class="marker" style="left:${q.x + dx}px;top:${q.y}px"><span class="hint-box">${h.label} 球往下掉時按 ${glyph(type, 'block')} 跳球</span></div>`;
       }
+    }
+    // 電腦持球者的名牌
+    const hd = game.ball.holder;
+    if (hd && !hd.human && game.phase !== 'gameOver') {
+      const q = renderer.project(hd.pos.x, hd.y + hd.height * 1.2, hd.pos.z);
+      const col = game.teams[hd.team].data.dark.trim;
+      html += `<div class="marker" style="left:${Math.round(q.x)}px;top:${Math.round(q.y)}px"><span class="nameplate" style="border-color:${col}">#${hd.number} ${hd.name}</span></div>`;
     }
     if (this.cache.markers !== html) { this.cache.markers = html; this.markers.innerHTML = html; }
   }

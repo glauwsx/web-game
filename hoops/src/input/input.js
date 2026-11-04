@@ -93,8 +93,9 @@ export class InputManager {
       buttons[7] = buttons[7] || rtv > 0.3;
       const axes = [gp.axes[0] || 0, gp.axes[1] || 0, gp.axes[2] || 0, gp.axes[3] || 0];
       const state = { buttons, axes, prev: prev ? prev.buttons : buttons.map(() => false), prevAxes: prev ? prev.axes : [0, 0, 0, 0] };
-      if (buttons.some((b, i) => b && !state.prev[i]) || Math.hypot(axes[0], axes[1]) > 0.5) {
+      if (buttons.some((b, i) => b && !state.prev[i])) {
         this.lastActivity = performance.now();
+        this.emitActivity();
       }
       this.padState.set(id, state);
     }
