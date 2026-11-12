@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DualSense 自適應扳機測試</title>
+<style>
+  :root { --bg:#12141a; --panel:#1c2029; --line:#2e3442; --text:#e8eaf0; --dim:#9099ab; --accent:#4c8dff; --ok:#3ecf8e; --warn:#ffb454; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, "Noto Sans TC", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { color: var(--dim); margin: 0 0 20px; font-size: 14px; }
+  .bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 16px; font-size:15px; cursor:pointer; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  #status { font-size:14px; color:var(--dim); }
+  #status.ok { color:var(--ok); } #status.warn { color:var(--warn); }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card h2 { margin:0 0 12px; font-size:17px; display:flex; justify-content:space-between; }
+  .card h2 span { color:var(--dim); font-weight:400; font-size:13px; }
+  label { display:block; font-size:13px; color:var(--dim); margin:12px 0 4px; }
+  label b { color:var(--text); float:right; font-variant-numeric: tabular-nums; }
+  select, input[type=range] { width:100%; }
+  select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; font-size:15px; }
+  .meter { height:14px; background:var(--bg); border-radius:7px; overflow:hidden; border:1px solid var(--line); position:relative; }
+  .meter i { display:block; height:100%; width:0; background:var(--accent); }
+  .zone { position:absolute; top:0; height:100%; background:rgba(255,180,84,.35); pointer-events:none; }
+  .hint { font-size:12px; color:var(--dim); margin-top:10px; min-height:36px; }
+  .row { display:flex; gap:12px; align-items:center; margin:16px 0; flex-wrap:wrap; font-size:14px; }
+  .presets { display:flex; gap:8px; flex-wrap:wrap; }
+  .presets button { padding:6px 12px; font-size:13px; }
+  pre { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:12px; color:var(--dim); overflow:auto; margin:8px 0 0; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DualSense 自適應扳機測試</h1>
+  <p class="sub">用 WebHID 直接控制 L2 / R2 阻力。需要電腦版 Chrome 或 Edge。USB 與藍牙都支援。</p>
+
+  <div class="bar">
+    <button id="connect">連接手把</button>
+    <button id="reset" class="ghost" disabled>關閉全部阻力</button>
+    <span id="status">尚未連接</span>
+  </div>
+
+  <div class="row">
+    <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--text)">
+      <input type="checkbox" id="link"> L2 與 R2 使用相同設定
+    </label>
+    <div class="presets">
+      <button class="ghost" data-preset="soft">輕阻力</button>
+      <button class="ghost" data-preset="hard">重阻力</button>
+      <button class="ghost" data-preset="gun">手槍扳機</button>
+      <button class="ghost" data-preset="bow">拉弓</button>
+      <button class="ghost" data-preset="engine">引擎震動</button>
+    </div>
+  </div>
+
+  <div class="grid" id="cards"></div>
+
+  <details style="margin-top:16px">
+    <summary style="cursor:pointer;color:var(--dim);font-size:13px">除錯資訊</summary>
+    <pre id="debug">—</pre>
+  </details>
+</main>
+
+<template id="tpl">
+  <div class="card">
+    <h2><em style="font-style:normal" class="name"></em><span>按壓量 <b class="val">0</b></span></h2>
+    <div class="meter"><i></i><div class="zone"></div></div>
+    <label>模式</label>
+    <select class="mode">
+      <option value="off">關閉</option>
+      <option value="feedback" selected>持續阻力（Feedback）</option>
+      <option value="weapon">扳機段落（Weapon）</option>
+      <option value="vibration">震動（Vibration）</option>
+    </select>
+    <div class="p p-start"><label>起始位置 <b></b></label><input type="range" class="start" min="0" max="9" value="2"></div>
+    <div class="p p-end"><label>結束位置 <b></b></label><input type="range" class="end" min="1" max="8" value="5"></div>
+    <div class="p p-force"><label>強度 <b></b></label><input type="range" class="force" min="1" max="8" value="5"></div>
+    <div class="p p-freq"><label>頻率（Hz） <b></b></label><input type="range" class="freq" min="1" max="60" value="20"></div>
+    <div class="hint"></div>
+  </div>
+</template>
+
+<script>
+const VENDOR = 0x054c;
+const PRODUCTS = [0x0ce6, 0x0df2]; // DualSense, DualSense Edge
+const $ = (s, r = document) => r.querySelector(s);
+const statusEl = $('#status'), debugEl = $('#debug');
+
+let device = null, bluetooth = false, seq = 0, sendTimer = null;
+
+// ---------- 扳機效果編碼（每個扳機 11 bytes：模式 + 10 個參數） ----------
+function encodeEffect(c) {
+  const b = new Uint8Array(11);
+  if (c.mode === 'off') { b[0] = 0x05; return b; }
+
+  if (c.mode === 'feedback') {
+    // 從 start 區到底，每一區都有相同強度的阻力
+    let active = 0, force = 0;
+    for (let i = c.start; i < 10; i++) { active |= 1 << i; force += (c.force - 1) * 2 ** (3 * i); }
+    b[0] = 0x21; b[1] = active & 0xff; b[2] = active >> 8;
+    for (let i = 0; i < 4; i++) b[3 + i] = Math.floor(force / 2 ** (8 * i)) & 0xff;
+  } else if (c.mode === 'weapon') {
+    // start 到 end 之間有阻力，壓過 end 後瞬間放開
+    const zones = (1 << c.start) | (1 << c.end);
+    b[0] = 0x25; b[1] = zones & 0xff; b[2] = zones >> 8; b[3] = c.force - 1;
+  } else if (c.mode === 'vibration') {
+    let active = 0, amp = 0;
+    for (let i = c.start; i < 10; i++) { active |= 1 << i; amp += (c.force - 1) * 2 ** (3 * i); }
+    b[0] = 0x26; b[1] = active & 0xff; b[2] = active >> 8;
+    for (let i = 0; i < 4; i++) b[3 + i] = Math.floor(amp / 2 ** (8 * i)) & 0xff;
+    b[9] = c.freq;
+  }
+  return b;
+}
+
+// ---------- 輸出報告 ----------
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (const x of bytes) c = CRC_TABLE[(c ^ x) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function buildCommon(left, right) {
+  const p = new Uint8Array(47);
+  p[0] = 0x04 | 0x08;          // 允許修改右扳機與左扳機
+  p.set(encodeEffect(right), 10);
+  p.set(encodeEffect(left), 21);
+  return p;
+}
+
+async function send() {
+  if (!device?.opened) return;
+  const common = buildCommon(readCfg('L2'), readCfg('R2'));
+  try {
+    if (!bluetooth) {
+      await device.sendReport(0x02, common);
+      debugEl.textContent = 'USB 0x02\n' + hex(common);
+    } else {
+      const data = new Uint8Array(77);
+      data[0] = (seq << 4) & 0xf0; seq = (seq + 1) & 0x0f;
+      data[1] = 0x10;
+      data.set(common, 2);
+      const crc = crc32([0xa2, 0x31, ...data.subarray(0, 73)]);
+      new DataView(data.buffer).setUint32(73, crc, true);
+      await device.sendReport(0x31, data);
+      debugEl.textContent = 'Bluetooth 0x31\n' + hex(data);
+    }
+  } catch (e) {
+    setStatus('傳送失敗：' + e.message, 'warn');
+  }
+}
+const hex = a => [...a].map(x => x.toString(16).padStart(2, '0')).join(' ');
+function queueSend() { clearTimeout(sendTimer); sendTimer = setTimeout(send, 30); }
+
+// ---------- 連接 ----------
+function setStatus(t, cls = '') { statusEl.textContent = t; statusEl.className = cls; }
+
+async function openDevice(d) {
+  device = d;
+  if (!d.opened) await d.open();
+  bluetooth = d.collections.some(c => (c.outputReports || []).some(r => r.reportId === 0x31));
+  if (bluetooth) { try { await d.receiveFeatureReport(0x05); } catch {} } // 切換到完整報告模式
+  d.addEventListener('inputreport', onInput);
+  $('#reset').disabled = false;
+  setStatus(`已連接：${d.productName}（${bluetooth ? '藍牙' : 'USB'}）`, 'ok');
+  send();
+}
+
+function onInput(e) {
+  const v = e.data;
+  let l, r;
+  if (e.reportId === 0x01 && v.byteLength >= 60) { l = v.getUint8(4); r = v.getUint8(5); }      // USB
+  else if (e.reportId === 0x31) { l = v.getUint8(5); r = v.getUint8(6); }                        // 藍牙完整報告
+  else if (e.reportId === 0x01) { l = v.getUint8(7); r = v.getUint8(8); }                        // 藍牙簡易報告
+  else return;
+  setMeter('L2', l); setMeter('R2', r);
+}
+
+$('#connect').onclick = async () => {
+  if (!navigator.hid) { setStatus('這個瀏覽器不支援 WebHID。請用電腦版 Chrome 或 Edge。', 'warn'); return; }
+  try {
+    const [d] = await navigator.hid.requestDevice({ filters: PRODUCTS.map(productId => ({ vendorId: VENDOR, productId })) });
+    if (d) await openDevice(d);
+  } catch (e) { setStatus('連接失敗：' + e.message, 'warn'); }
+};
+
+$('#reset').onclick = () => { for (const k of ['L2', 'R2']) { cards[k].mode.value = 'off'; refresh(k); } send(); };
+
+if (navigator.hid) {
+  navigator.hid.addEventListener('disconnect', e => {
+    if (e.device === device) { device = null; $('#reset').disabled = true; setStatus('手把已中斷連接', 'warn'); }
+  });
+  navigator.hid.getDevices().then(ds => {   // 之前授權過就自動連接
+    const d = ds.find(x => x.vendorId === VENDOR && PRODUCTS.includes(x.productId));
+    if (d) openDevice(d).catch(() => {});
+  });
+} else {
+  setStatus('這個瀏覽器不支援 WebHID。請用電腦版 Chrome 或 Edge。', 'warn');
+}
+window.addEventListener('beforeunload', () => {
+  if (device?.opened) { for (const k of ['L2', 'R2']) cards[k].mode.value = 'off'; send(); }
+});
+
+// ---------- 介面 ----------
+const cards = {};
+const HINTS = {
+  off: '沒有阻力。扳機像一般手把。',
+  feedback: '從起始位置到底都有固定阻力。強度越高越難按。',
+  weapon: '起始到結束位置之間有阻力。壓過結束位置後阻力瞬間消失，像扣扳機。',
+  vibration: '從起始位置開始，扳機會震動。要按住扳機才感覺得到。',
+};
+const SHOW = { off: [], feedback: ['start', 'force'], weapon: ['start', 'end', 'force'], vibration: ['start', 'force', 'freq'] };
+
+for (const key of ['L2', 'R2']) {
+  const el = $('#tpl').content.firstElementChild.cloneNode(true);
+  $('.name', el).textContent = key === 'L2' ? 'L2（左扳機）' : 'R2（右扳機）';
+  const c = cards[key] = { el, mode: $('.mode', el), start: $('.start', el), end: $('.end', el), force: $('.force', el), freq: $('.freq', el) };
+  for (const n of ['mode', 'start', 'end', 'force', 'freq']) {
+    c[n].addEventListener('input', () => {
+      if ($('#link').checked) copyCfg(key, key === 'L2' ? 'R2' : 'L2');
+      refresh(key); queueSend();
+    });
+  }
+  $('#cards').append(el);
+  refresh(key);
+}
+
+function readCfg(key) {
+  const c = cards[key];
+  return { mode: c.mode.value, start: +c.start.value, end: +c.end.value, force: +c.force.value, freq: +c.freq.value };
+}
+function copyCfg(from, to) {
+  cards[to].mode.value = cards[from].mode.value;
+  refresh(to); // 先更新滑桿範圍，再複製數值
+  for (const n of ['start', 'end', 'force', 'freq']) cards[to][n].value = cards[from][n].value;
+  refresh(to);
+}
+function refresh(key) {
+  const c = cards[key], mode = c.mode.value;
+  // Weapon 模式的範圍限制：start 2~7，end 在 start+1 ~ 8
+  if (mode === 'weapon') {
+    c.start.min = 2; c.start.max = 7;
+    if (+c.start.value < 2) c.start.value = 2;
+    if (+c.start.value > 7) c.start.value = 7;
+    c.end.min = +c.start.value + 1;
+    if (+c.end.value <= +c.start.value) c.end.value = +c.start.value + 1;
+  } else { c.start.min = 0; c.start.max = 9; }
+  for (const n of ['start', 'end', 'force', 'freq']) {
+    const wrap = $('.p-' + n, c.el);
+    wrap.classList.toggle('hidden', !SHOW[mode].includes(n));
+    $('b', wrap).textContent = c[n].value;
+  }
+  $('.hint', c.el).textContent = HINTS[mode];
+  const z = $('.zone', c.el);
+  if (mode === 'off') { z.style.width = '0'; return; }
+  const s = +c.start.value, e = mode === 'weapon' ? +c.end.value : 10;
+  z.style.left = s * 10 + '%'; z.style.width = (e - s) * 10 + '%';
+}
+function setMeter(key, v) {
+  const c = cards[key];
+  $('.meter i', c.el).style.width = (v / 255 * 100) + '%';
+  $('.val', c.el).textContent = v;
+}
+
+const PRESETS = {
+  soft:   { mode: 'feedback', start: 1, force: 2 },
+  hard:   { mode: 'feedback', start: 0, force: 8 },
+  gun:    { mode: 'weapon', start: 3, end: 5, force: 8 },
+  bow:    { mode: 'feedback', start: 2, force: 6 },
+  engine: { mode: 'vibration', start: 2, force: 6, freq: 30 },
+};
+document.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => {
+  const p = PRESETS[btn.dataset.preset];
+  for (const key of ['L2', 'R2']) {
+    cards[key].mode.value = p.mode;
+    refresh(key); // 先更新滑桿範圍，再套用數值
+    for (const [n, v] of Object.entries(p)) cards[key][n].value = v;
+    refresh(key);
+  }
+  send();
+});
+$('#link').onchange = () => { if ($('#link').checked) { copyCfg('L2', 'R2'); queueSend(); } };
+</script>
+</body>
+</html>
