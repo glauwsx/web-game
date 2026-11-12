@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HOOPBEAT 籃球音遊</title>
+  <meta name="description" content="原創網頁 3D 籃球音遊：用 loop station 拼一首歌，歌的速度、能量、律動決定球隊怎麼打；每個動作都要踩拍點。支援 Xbox、PlayStation、Switch Pro 手把與鍵盤。">
+  <link rel="stylesheet" href="./src/hoops/style.css">
+  <link rel="stylesheet" href="./src/hoopbeat.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+  <div id="fade"></div>
+  <div id="hb-pulse"></div>
+  <div id="hud" class="hidden">
+    <div id="scoreboard"></div>
+    <div id="banner"></div>
+    <div id="overlay-markers"></div>
+    <div id="meter"><div class="meter-zone2"></div><div class="meter-fill"></div><div class="meter-zone"></div><div class="meter-label"></div></div>
+    <div id="hints"></div>
+    <div id="ticker"></div>
+  </div>
+  <div id="hb-hud" class="hidden">
+    <div id="hb-panel-home" class="hb-panel home"></div>
+    <div id="hb-panel-away" class="hb-panel away"></div>
+    <div id="hb-popups"></div>
+    <div id="hb-lane-wrap"><div id="hb-lane-info"></div><canvas id="hb-lane" width="560" height="40"></canvas></div>
+    <div id="hb-combo"></div>
+  </div>
+  <div id="screens"></div>
+  <div id="toasts"></div>
+  <noscript>這個遊戲需要開啟 JavaScript。</noscript>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

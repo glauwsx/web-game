@@ -1,0 +1,9 @@
+{
+  "name": "hoopbeat",
+  "private": true,
+  "type": "module",
+  "description": "籃球音遊：loop station 的音樂決定球員表現（純靜態，不需要打包）",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.js"
+  }
+}
