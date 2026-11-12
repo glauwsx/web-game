@@ -40,7 +40,7 @@
 <body>
 <main>
   <h1>DualSense 自適應扳機測試</h1>
-  <p class="sub">用 WebHID 直接控制 L2 / R2 阻力。需要電腦版 Chrome 或 Edge。USB 與藍牙都支援。</p>
+  <p class="sub">用 WebHID 直接控制 L2 / R2 阻力與燈光。需要電腦版 Chrome 或 Edge。USB 與藍牙都支援。</p>
 
   <div class="bar">
     <button id="connect">連接手把</button>
@@ -63,6 +63,19 @@
   </div>
 
   <div class="grid" id="cards"></div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>燈光</h2>
+    <div class="row" style="margin:0">
+      <label style="margin:0;color:var(--text)">燈條顏色 <input type="color" id="color" value="#0050ff" style="vertical-align:middle"></label>
+      <span id="leds" style="display:flex;gap:6px;align-items:center">玩家指示燈
+        <input type="checkbox" data-bit="1"><input type="checkbox" data-bit="2"><input type="checkbox" data-bit="4" checked><input type="checkbox" data-bit="8"><input type="checkbox" data-bit="16">
+      </span>
+      <label style="margin:0;color:var(--text)">麥克風燈
+        <select id="mic" style="width:auto"><option value="0">關</option><option value="1">亮</option><option value="2">呼吸</option></select>
+      </label>
+    </div>
+  </div>
 
   <details style="margin-top:16px">
     <summary style="cursor:pointer;color:var(--dim);font-size:13px">除錯資訊</summary>
@@ -97,7 +110,7 @@ const PRODUCTS = [0x0ce6, 0x0df2]; // DualSense, DualSense Edge
 const $ = (s, r = document) => r.querySelector(s);
 const statusEl = $('#status'), debugEl = $('#debug');
 
-let device = null, bluetooth = false, seq = 0, sendTimer = null;
+let device = null, bluetooth = false, seq = 0, sendTimer = null, lightSetup = true;
 
 // ---------- 扳機效果編碼（每個扳機 11 bytes：模式 + 10 個參數） ----------
 function encodeEffect(c) {
@@ -144,6 +157,14 @@ function crc32(bytes) {
 function buildCommon(left, right) {
   const p = new Uint8Array(47);
   p[0] = 0x04 | 0x08;          // 允許修改右扳機與左扳機
+  p[1] = 0x01 | 0x04 | 0x10;   // 允許修改麥克風燈、燈條、玩家指示燈
+  p[8] = +$('#mic').value;
+  if (lightSetup) { p[38] = 0x02; p[41] = 0x02; lightSetup = false; } // 連接後送一次：關掉藍牙配對的藍色動畫
+  let leds = 0;
+  document.querySelectorAll('#leds input:checked').forEach(x => leds |= +x.dataset.bit);
+  p[43] = leds | 0x20;         // 0x20 = 立即切換，不淡入
+  const rgb = parseInt($('#color').value.slice(1), 16);
+  p[44] = rgb >> 16; p[45] = (rgb >> 8) & 0xff; p[46] = rgb & 0xff;
   p.set(encodeEffect(right), 10);
   p.set(encodeEffect(left), 21);
   return p;
@@ -181,6 +202,7 @@ async function openDevice(d) {
   if (!d.opened) await d.open();
   bluetooth = d.collections.some(c => (c.outputReports || []).some(r => r.reportId === 0x31));
   if (bluetooth) { try { await d.receiveFeatureReport(0x05); } catch {} } // 切換到完整報告模式
+  lightSetup = true;
   d.addEventListener('inputreport', onInput);
   $('#reset').disabled = false;
   setStatus(`已連接：${d.productName}（${bluetooth ? '藍牙' : 'USB'}）`, 'ok');
@@ -321,6 +343,7 @@ document.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => {
   }
   send();
 });
+for (const el of document.querySelectorAll('#color, #mic, #leds input')) el.addEventListener('input', queueSend);
 $('#link').onchange = () => { if ($('#link').checked) { copyCfg('L2', 'R2'); queueSend(); } };
 </script>
 </body>
