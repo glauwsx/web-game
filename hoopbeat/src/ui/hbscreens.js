@@ -286,6 +286,7 @@ const ROWS = [
   ['投籃（按住起跳，強拍放開）', 'left'],
   ['傳球（往搖桿方向）', 'bottom'],
   ['運球過人', 'right'],
+  ['運球動作（撥一下）', 'rstick', '—'],
   ['高吊傳球／空中接力', 'top'],
   ['防守：抄截', 'left'],
   ['防守：蓋火鍋／搶籃板', 'top'],
@@ -302,6 +303,7 @@ export function helpScreen(app, opts = {}) {
   const brands = ['xbox', 'ps', 'switch'];
   const cell = (b, k) => {
     if (k === 'stick') return b === 'switch' ? 'L 搖桿' : '左搖桿';
+    if (k === 'rstick') return b === 'switch' ? 'R 搖桿' : '右搖桿';
     if (k === 'dpad') return '十字鍵 ↑↓←→';
     if (k === 'lbrb') return `${GLYPHS[b].lb}／${GLYPHS[b].rb}`;
     if (k === 'rs') return b === 'ps' ? 'R3' : b === 'switch' ? '按 R 搖桿' : '按右搖桿';
@@ -317,6 +319,7 @@ export function helpScreen(app, opts = {}) {
         <li>投籃、傳球、過人、抄截、蓋火鍋都會判定：按下的時間離拍點多近 → <b style="color:#ffd84a">Perfect</b>／<b style="color:#5ef0a0">Great</b>／<b style="color:#6cc6ff">Good</b>／<b style="color:#ff6b6b">Miss</b>。</li>
         <li>跳投在「放開」時判定，最佳出手點在<b>強拍</b>（每小節第 1、3 拍，金色）。踩在弱拍上最多 Great。</li>
         <li>腳下的圈縮到最小的瞬間就是拍點；底部軌道上的點碰到白線也是。</li>
+        <li><b>右搖桿運球</b>：往持球手那一側撥＝內外運球，往另一側＝換手，往前＝急停再啟動，往後＝後撤步，衝刺＋往後＝轉身。</li>
         <li>連續踩中累積<b>節奏連擊</b>，全隊手感變好；Miss 會歸零。</li>
         <li>BPM 越快，拍點越密、判定窗口越窄。</li>
       </ul></div>

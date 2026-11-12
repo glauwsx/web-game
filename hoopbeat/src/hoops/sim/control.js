@@ -7,6 +7,7 @@ export function emptyInput() {
     mx: 0, my: 0, sprint: false, stance: false,
     shoot: false, shootDown: false, pass: false, passDown: false,
     move: false, moveDown: false, lob: false, lobDown: false,
+    rs: null, // HOOPBEAT
   };
 }
 
@@ -171,7 +172,8 @@ export function applyHumanInput(game, h, input, dt) {
         const alley = dunkRange(t) > 0 && (dh < 3.0 || (dh < 6.5 && toward && Math.hypot(t.vel.x, t.vel.z) > 2.5));
         game.passBall(p, t, { kind: alley ? 'alley' : 'lob' });
       }
-    } else if (input.moveDown) game.dribbleMove(p, input.mx, input.my);
+    } else if (input.rs) game.dribbleMove(p, input.rs.x, input.rs.y, { stick: true, sprint: !!input.sprint }); // HOOPBEAT: 右搖桿運球
+    else if (input.moveDown) game.dribbleMove(p, input.mx, input.my);
   } else if (loose) {
     if (input.lobDown || input.shootDown) game.jumpPlayer(p, 'rebound');
     if (input.passDown && !offense) switchToNearest(game, h);

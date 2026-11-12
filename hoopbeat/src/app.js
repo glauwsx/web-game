@@ -77,6 +77,40 @@ export class HoopbeatApp extends App {
     this.exposeHBDebug();
   }
 
+  // ── 裝置 ──
+  // 手把一接上就接手鍵盤的位置，鍵盤改成不下場（除非玩家自己在「手把分配」動過鍵盤）。
+  // 不這樣做的話，鍵盤會一直佔著一個沒人操作的球員。
+  onDevice(type, dev) {
+    if (dev && dev.kind === 'gamepad' && !this.kbPinned) {
+      const padSides = () => this.input.connectedDevices().filter((d) => d.kind === 'gamepad' && d.id !== dev.id).map((d) => this.assign.get(d.id) ?? 0);
+      if (type === 'connected') {
+        const kbSide = this.assign.get('kb') ?? 0;
+        if (kbSide !== 0 && !(this.assign.get(dev.id) ?? 0)) {
+          this.assign.set(dev.id, kbSide);
+          this.assign.set('kb', 0);
+        }
+        // 比賽中：鍵盤玩家直接換成這支手把
+        const g = this.game;
+        if (g && !this.demo && !g.humans.some((h) => h.id === dev.id)) {
+          const h = g.humans.find((x) => x.id === 'kb');
+          if (h) {
+            h.id = dev.id;
+            this.pending.delete('kb');
+            this.toast(`${h.label} 改用手把操作`, 'ok');
+          }
+        }
+      } else if (type === 'disconnected') {
+        // 最後一支手把拔掉：位置還給鍵盤
+        const side = this.assign.get(dev.id) ?? 0;
+        if (side !== 0 && (this.assign.get('kb') ?? 0) === 0 && !padSides().some((s) => s !== 0)) {
+          this.assign.set('kb', side);
+          this.assign.set(dev.id, 0);
+        }
+      }
+    }
+    super.onDevice(type, dev);
+  }
+
   // ── 畫面 ──
   go(name, opts = {}) {
     this.setupHB();

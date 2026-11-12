@@ -96,6 +96,11 @@ export class InputManager {
       buttons[7] = buttons[7] || rtv > 0.3;
       const axes = [gp.axes[0] || 0, gp.axes[1] || 0, gp.axes[2] || 0, gp.axes[3] || 0];
       const state = { buttons, axes, prev: prev ? prev.buttons : buttons.map(() => false), prevAxes: prev ? prev.axes : [0, 0, 0, 0] };
+      // HOOPBEAT: 右搖桿「撥一下」＝運球動作。推過 0.6 算一次，回到 0.3 以內才能再撥
+      const rm = Math.hypot(axes[2], axes[3]);
+      const armed = prev ? prev.rsArmed : true;
+      state.rsFlick = armed && rm >= 0.6 ? { x: axes[2] / rm, y: axes[3] / rm } : null;
+      state.rsArmed = state.rsFlick ? false : armed || rm < 0.3;
       if (buttons.some((b, i) => b && !state.prev[i])) {
         this.lastActivity = performance.now();
         this.emitActivity();
@@ -138,6 +143,7 @@ export class InputManager {
       mx: 0, my: 0, sprint: false, stance: false,
       shoot: false, shootDown: false, pass: false, passDown: false,
       move: false, moveDown: false, lob: false, lobDown: false, pause: false,
+      rs: null, // HOOPBEAT: 右搖桿撥動的方向（只在撥下去的那一幀有值）
       // HOOPBEAT: 戰術配樂（十字鍵／肩鍵／數字鍵），只記按下的瞬間
       dj: { up: false, down: false, left: false, right: false, prev: false, next: false, reset: false },
     };
@@ -178,6 +184,7 @@ export class InputManager {
     inp.move = b[BTN.B]; inp.moveDown = pr(BTN.B);
     inp.lob = b[BTN.Y]; inp.lobDown = pr(BTN.Y);
     inp.pause = pr(BTN.START);
+    inp.rs = s.rsFlick || null; // HOOPBEAT
     return inp;
   }
 

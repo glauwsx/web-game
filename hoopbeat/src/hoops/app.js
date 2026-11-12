@@ -260,7 +260,7 @@ export class App {
       for (const h of g.humans) {
         const cur = this.input.gameInput(h.id);
         const pend = this.pending.get(h.id) || emptyInput();
-        for (const k of ['shootDown', 'passDown', 'moveDown', 'lobDown']) cur[k] = cur[k] || pend[k];
+        for (const k of ['shootDown', 'passDown', 'moveDown', 'lobDown', 'rs']) cur[k] = cur[k] || pend[k]; // HOOPBEAT: rs
         this.pending.set(h.id, cur);
       }
     }
@@ -275,7 +275,7 @@ export class App {
           for (const h of g.humans) {
             const inp = this.pending.get(h.id) || emptyInput();
             g.setHumanInput(h.id, inp);
-            const cleared = Object.assign({}, inp, { shootDown: false, passDown: false, moveDown: false, lobDown: false });
+            const cleared = Object.assign({}, inp, { shootDown: false, passDown: false, moveDown: false, lobDown: false, rs: null }); // HOOPBEAT: rs
             this.pending.set(h.id, cleared);
           }
         }

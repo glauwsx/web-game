@@ -244,13 +244,16 @@ export function controllerAssign(app) {
         const r = row.getBoundingClientRect();
         const third = (e.clientX - r.left) / r.width;
         app.assign.set(d.id, third < 0.33 ? -1 : third > 0.66 ? 1 : 0);
+        if (d.id === 'kb') app.kbPinned = true; // HOOPBEAT: 玩家自己決定鍵盤的位置，之後不再自動讓位
         app.audio.ui('move');
         render();
       });
       rows.appendChild(row);
     }
     const t = primaryType(app);
-    note.innerHTML = `${humans === 0 ? '目前沒有人加入：會變成電腦對戰觀賞。' : `共 ${humans} 位玩家。可以 1P 對 2P，也可以兩人同隊打電腦。`}<br>按 ${glyph(t, 'confirm')} 繼續　·　手把可以隨時插拔，插上後會自動出現在這裡`;
+    // HOOPBEAT: 手把接手之後，說明鍵盤去哪了
+    const kbBench = pads.length > 0 && (app.assign.get('kb') ?? 0) === 0 && !app.kbPinned;
+    note.innerHTML = `${kbBench ? '手把已接手，鍵盤改成不下場。要兩個人一起玩，用鍵盤的 ←／→ 把鍵盤移到一隊。<br>' : ''}${humans === 0 ? '目前沒有人加入：會變成電腦對戰觀賞。' : `共 ${humans} 位玩家。可以 1P 對 2P，也可以兩人同隊打電腦。`}<br>按 ${glyph(t, 'confirm')} 繼續　·　手把可以隨時插拔，插上後會自動出現在這裡`;
   };
   render();
   root.insertAdjacentHTML('beforeend', footer(app, [['confirm', '確定'], ['back', '返回']]));
@@ -260,6 +263,7 @@ export function controllerAssign(app) {
     input(arr) {
       for (const { id, mi } of arr) {
         const cur = app.assign.get(id) ?? 0;
+        if (id === 'kb' && (mi.left || mi.right)) app.kbPinned = true; // HOOPBEAT
         if (mi.left && cur > -1) { app.assign.set(id, cur - 1); app.audio.ui('move'); render(); }
         if (mi.right && cur < 1) { app.assign.set(id, cur + 1); app.audio.ui('move'); render(); }
         if (mi.confirm) { app.audio.ui('select'); app.go('settings'); return; }

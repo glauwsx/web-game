@@ -245,7 +245,9 @@ export class HUD {
       else if (off) items = [['pass', '要球'], ['lob', '要空中接力'], ['sprint', '衝刺']];
       else items = [['steal', '抄截'], ['block', '蓋火鍋'], ['switch', '換人'], ['stance', '壓低'], ['sprint', '衝刺']];
       const col = HUMAN_COLORS[h.slot % HUMAN_COLORS.length];
-      boxes.push(`<div class="hint-box"><span class="who" style="background:${col}">${h.label}</span><span style="color:#cfd6e4">#${p.number} ${p.name}</span>${items.map(([a, l]) => `<span>${glyph(type, a)}${l}</span>`).join('')}</div>`);
+      // HOOPBEAT: 手把持球時提示右搖桿運球
+      const rs = hasBall && type !== 'keyboard' ? `<span><span class="glyph wide" style="color:#cfd6e4">${type === 'switch' ? 'R 搖桿' : '右搖桿'}</span>運球</span>` : '';
+      boxes.push(`<div class="hint-box"><span class="who" style="background:${col}">${h.label}</span><span style="color:#cfd6e4">#${p.number} ${p.name}</span>${items.map(([a, l]) => `<span>${glyph(type, a)}${l}</span>`).join('')}${rs}</div>`);
     }
     const key = boxes.join('|');
     if (key !== this.hintKey) {

@@ -535,7 +535,8 @@ export class Game {
       case 'land':
       case 'stumble':
       case 'move':
-        if (a.type === 'move' && a.t > a.dur * 0.6) a.forceVel = null;
+        if (a.type === 'move' && a.burst && a.t > a.dur * 0.4) { a.forceVel = a.burst; a.burst = null; } // HOOPBEAT: 急停再啟動
+        if (a.type === 'move' && a.t > a.dur * (a.kind === 'hesi' ? 0.9 : 0.6)) a.forceVel = null;
         if (a.t >= a.dur) p.action = null;
         break;
       case 'steal':
@@ -1033,22 +1034,38 @@ export class Game {
   }
 
   // ---------- 運球過人 ----------
-  dribbleMove(p, dx, dz) {
+  dribbleMove(p, dx, dz, opts = {}) {
     if (p.moveCooldown > 0 || p.action || this.ball.holder !== p || p.airborne) return false;
     const dl = Math.hypot(dx, dz);
     let ux, uz;
     const fx = Math.cos(p.facing), fz = Math.sin(p.facing);
     if (dl > 0.3) { ux = dx / dl; uz = dz / dl; } else { ux = -fz * p.anim.dribbleHand; uz = fx * p.anim.dribbleHand; }
     const rel = Math.abs(wrapAngle(Math.atan2(uz, ux) - p.facing));
-    const kind = rel > 2.0 ? 'spin' : 'cross';
-    const sp = p.maxSpeed(true) * (kind === 'spin' ? 1.05 : 1.18);
+    let kind = rel > 2.0 ? 'spin' : 'cross';
+    // HOOPBEAT: 右搖桿運球。方向相對於球員的面向和持球手，決定是哪一種動作
+    if (opts.stick) {
+      const toHand = wrapAngle(Math.atan2(uz, ux) - p.facing) * p.anim.dribbleHand > 0;
+      if (rel > 2.2) kind = opts.sprint ? 'spin' : 'stepback';
+      else if (rel < 0.6) kind = 'hesi';
+      else kind = toHand ? 'inout' : 'cross';
+    }
+    const M = {
+      cross: { v: 1.18, dur: 0.32 }, spin: { v: 1.05, dur: 0.44 },
+      inout: { v: 1.14, dur: 0.32 }, hesi: { v: 1.3, dur: 0.4 }, stepback: { v: 1.2, dur: 0.34 },
+    }[kind];
+    const sp = p.maxSpeed(true) * M.v;
     p.action = {
-      type: 'move', kind, t: 0, dur: kind === 'spin' ? 0.44 : 0.32,
-      forceVel: { x: ux * sp, z: uz * sp }, lockFace: kind === 'spin',
+      type: 'move', kind, t: 0, dur: M.dur,
+      forceVel: { x: ux * sp, z: uz * sp }, lockFace: kind === 'spin' || kind === 'stepback',
     };
-    p.moveCooldown = 0.85;
+    if (kind === 'hesi') {
+      // 急停再啟動：前 40% 幾乎停住，然後往前衝
+      p.action.burst = { x: ux * sp, z: uz * sp };
+      p.action.forceVel = { x: ux * sp * 0.12, z: uz * sp * 0.12 };
+    }
+    p.moveCooldown = opts.stick ? 0.6 : 0.85;
     if (kind === 'cross') p.anim.dribbleHand *= -1;
-    else p.anim.spin = 1;
+    else if (kind === 'spin') p.anim.spin = 1;
     // 對防守者的影響
     let def = null, dd = 99;
     for (const d of this.onCourt(1 - p.team)) {
@@ -1142,6 +1159,15 @@ export class Game {
         fwd = 0.22 - 0.2 * Math.sin(k * Math.PI);
         hgt = BALL_R + (handY - BALL_R) * Math.abs(Math.cos(Math.PI * k)) * 0.9;
         if (!a.bounced && k >= 0.5) { a.bounced = true; this.emit('bounce', { x: b.pos.x, z: b.pos.z, dribble: true, player: p }); }
+      } else if (a.kind === 'inout') {
+        // HOOPBEAT: 內外運球：球往身體中間帶一下，再回到同一隻手
+        side = 0.3 * hand * (1 - 1.1 * Math.sin(k * Math.PI));
+        fwd = 0.3;
+      } else if (a.kind === 'hesi') {
+        hgt = BALL_R + (handY * 1.12 - BALL_R) * Math.abs(Math.cos(Math.PI * k));
+      } else if (a.kind === 'stepback') {
+        fwd = 0.34;
+        hgt = BALL_R + (handY - BALL_R) * Math.abs(Math.cos(Math.PI * k));
       } else {
         side = 0.3 * hand * Math.cos(k * Math.PI * 2);
         fwd = 0.2;
