@@ -58,6 +58,7 @@
       <button class="ghost" data-preset="gun">手槍扳機</button>
       <button class="ghost" data-preset="bow">拉弓</button>
       <button class="ghost" data-preset="engine">引擎震動</button>
+      <button class="ghost" data-preset="rawmax">原始最強</button>
     </div>
   </div>
 
@@ -79,11 +80,13 @@
       <option value="feedback" selected>持續阻力（Feedback）</option>
       <option value="weapon">扳機段落（Weapon）</option>
       <option value="vibration">震動（Vibration）</option>
+      <option value="rawFeedback">原始持續阻力（0x01，0–255）</option>
+      <option value="rawWeapon">原始扳機段落（0x02，0–255）</option>
     </select>
     <div class="p p-start"><label>起始位置 <b></b></label><input type="range" class="start" min="0" max="9" value="2"></div>
     <div class="p p-end"><label>結束位置 <b></b></label><input type="range" class="end" min="1" max="8" value="5"></div>
     <div class="p p-force"><label>強度 <b></b></label><input type="range" class="force" min="1" max="8" value="5"></div>
-    <div class="p p-freq"><label>頻率（Hz） <b></b></label><input type="range" class="freq" min="1" max="60" value="20"></div>
+    <div class="p p-freq"><label>頻率（Hz） <b></b></label><input type="range" class="freq" min="1" max="255" value="20"></div>
     <div class="hint"></div>
   </div>
 </template>
@@ -117,6 +120,11 @@ function encodeEffect(c) {
     b[0] = 0x26; b[1] = active & 0xff; b[2] = active >> 8;
     for (let i = 0; i < 4; i++) b[3 + i] = Math.floor(amp / 2 ** (8 * i)) & 0xff;
     b[9] = c.freq;
+  } else if (c.mode === 'rawFeedback') {
+    // 舊版模式：位置與強度都是 0–255
+    b[0] = 0x01; b[1] = c.start; b[2] = c.force;
+  } else if (c.mode === 'rawWeapon') {
+    b[0] = 0x02; b[1] = c.start; b[2] = c.end; b[3] = c.force;
   }
   return b;
 }
@@ -220,9 +228,29 @@ const HINTS = {
   off: '沒有阻力。扳機像一般手把。',
   feedback: '從起始位置到底都有固定阻力。強度越高越難按。',
   weapon: '起始到結束位置之間有阻力。壓過結束位置後阻力瞬間消失，像扣扳機。',
-  vibration: '從起始位置開始，扳機會震動。要按住扳機才感覺得到。',
+  vibration: '從起始位置開始，扳機會震動。要按住扳機才感覺得到。頻率是 1 個位元組，只能是整數。',
+  rawFeedback: '舊版持續阻力。位置與強度直接用 0–255。用來和「持續阻力」比較力道。',
+  rawWeapon: '舊版扳機段落。起始、結束、強度直接用 0–255。',
 };
-const SHOW = { off: [], feedback: ['start', 'force'], weapon: ['start', 'end', 'force'], vibration: ['start', 'force', 'freq'] };
+// 區（zone）對應的按壓量。依實測：第 3 區約 95，第 5 區約 155。
+const ZONE_OFFSET = 5, ZONE_WIDTH = 30;
+const zoneRaw = k => Math.min(255, ZONE_OFFSET + ZONE_WIDTH * k);
+const RANGES = {
+  feedback:    { start: [0, 9], force: [1, 8] },
+  weapon:      { start: [2, 7], end: [3, 8], force: [1, 8] },
+  vibration:   { start: [0, 9], force: [1, 8], freq: [1, 255] },
+  rawFeedback: { start: [0, 255], force: [0, 255] },
+  rawWeapon:   { start: [0, 255], end: [0, 255], force: [0, 255] },
+};
+const DEFAULTS = {
+  feedback:    { start: 2, force: 5 },
+  weapon:      { start: 3, end: 5, force: 8 },
+  vibration:   { start: 2, force: 6, freq: 30 },
+  rawFeedback: { start: 60, force: 255 },
+  rawWeapon:   { start: 90, end: 150, force: 255 },
+};
+const SHOW = { off: [], feedback: ['start', 'force'], weapon: ['start', 'end', 'force'], vibration: ['start', 'force', 'freq'],
+  rawFeedback: ['start', 'force'], rawWeapon: ['start', 'end', 'force'] };
 
 for (const key of ['L2', 'R2']) {
   const el = $('#tpl').content.firstElementChild.cloneNode(true);
@@ -249,25 +277,25 @@ function copyCfg(from, to) {
   refresh(to);
 }
 function refresh(key) {
-  const c = cards[key], mode = c.mode.value;
-  // Weapon 模式的範圍限制：start 2~7，end 在 start+1 ~ 8
-  if (mode === 'weapon') {
-    c.start.min = 2; c.start.max = 7;
-    if (+c.start.value < 2) c.start.value = 2;
-    if (+c.start.value > 7) c.start.value = 7;
-    c.end.min = +c.start.value + 1;
-    if (+c.end.value <= +c.start.value) c.end.value = +c.start.value + 1;
-  } else { c.start.min = 0; c.start.max = 9; }
+  const c = cards[key], mode = c.mode.value, R = RANGES[mode] || {}, raw = mode.startsWith('raw');
+  for (const n in R) { c[n].min = R[n][0]; c[n].max = R[n][1]; }
+  if (c.lastMode !== mode) {   // 換模式時套用該模式的預設值
+    if (c.lastMode !== undefined) for (const [n, v] of Object.entries(DEFAULTS[mode] || {})) c[n].value = v;
+    c.lastMode = mode;
+  }
+  if (mode === 'weapon') c.end.min = +c.start.value + 1;                 // 結束必須在起始之後
+  if (mode === 'rawWeapon' && +c.end.value < +c.start.value) c.end.value = c.start.value;
   for (const n of ['start', 'end', 'force', 'freq']) {
-    const wrap = $('.p-' + n, c.el);
+    const wrap = $('.p-' + n, c.el), v = +c[n].value;
     wrap.classList.toggle('hidden', !SHOW[mode].includes(n));
-    $('b', wrap).textContent = c[n].value;
+    $('b', wrap).textContent = !raw && (n === 'start' || n === 'end') ? `第 ${v} 區（按壓量約 ${zoneRaw(v)}）` : v;
   }
   $('.hint', c.el).textContent = HINTS[mode];
   const z = $('.zone', c.el);
   if (mode === 'off') { z.style.width = '0'; return; }
-  const s = +c.start.value, e = mode === 'weapon' ? +c.end.value : 10;
-  z.style.left = s * 10 + '%'; z.style.width = (e - s) * 10 + '%';
+  const s = raw ? +c.start.value : zoneRaw(+c.start.value);
+  const e = mode === 'weapon' ? zoneRaw(+c.end.value) : mode === 'rawWeapon' ? +c.end.value : 255;
+  z.style.left = s / 255 * 100 + '%'; z.style.width = Math.max(0, e - s) / 255 * 100 + '%';
 }
 function setMeter(key, v) {
   const c = cards[key];
@@ -281,6 +309,7 @@ const PRESETS = {
   gun:    { mode: 'weapon', start: 3, end: 5, force: 8 },
   bow:    { mode: 'feedback', start: 2, force: 6 },
   engine: { mode: 'vibration', start: 2, force: 6, freq: 30 },
+  rawmax: { mode: 'rawFeedback', start: 0, force: 255 },
 };
 document.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => {
   const p = PRESETS[btn.dataset.preset];
