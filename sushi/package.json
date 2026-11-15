@@ -1,0 +1,11 @@
+{
+  "name": "sushi-shinkufu",
+  "private": true,
+  "type": "module",
+  "description": "超神田壽司 真工夫對決：壽司店經營 + 小鋼珠 + 賽車（純靜態，不需要打包）",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.js",
+    "e2e": "node tests/run-e2e.mjs",
+    "serve": "node tests/serve.mjs"
+  }
+}

@@ -1,0 +1,129 @@
+// 啟動、場景管理。
+import { createStepper, startLoop } from './core/loop.js';
+import { createSceneManager } from './core/scenes.js';
+import { createInput } from './core/input.js';
+import { createSaveStore, probeLocalStorage } from './core/save.js';
+import { t } from './data/strings.js';
+import { toast } from './ui/dom.js';
+import { createTitleScene, createMainMenuScene, createPlaceholderScene } from './ui/menus.js';
+
+const W = 480;
+const H = 270;
+const MIN_W = 640; // 支援的最小視窗寬度
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const stage = document.getElementById('stage');
+const uiRoot = document.getElementById('ui');
+document.getElementById('rotate-msg').textContent = t('rotate.msg');
+
+// ---- 網址參數 ----
+const query = new URLSearchParams(location.search);
+const debug = query.get('debug') === '1';
+const params = {
+  debug,
+  seed: query.has('seed') ? Number(query.get('seed')) >>> 0 : null,
+  scene: query.get('scene') || '',
+  speed: debug && query.has('speed') ? Math.max(1, Number(query.get('speed')) || 1) : 1,
+};
+
+// ---- 畫布縮放 ----
+// 畫布邏輯解析度固定 480×270。放大到視窗能容納的最大 16:9。
+// 放大倍數（以裝置像素計）取整數後如果損失不到 15%，就用整數倍，像素才會一樣大。
+function layout() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  let scale = Math.min(vw / W, vh / H);
+  const dev = scale * dpr;
+  const snapped = Math.floor(dev);
+  if (snapped >= 1 && snapped / dev >= 0.85) scale = snapped / dpr;
+  const sw = Math.round(W * scale);
+  const sh = Math.round(H * scale);
+  const root = document.documentElement.style;
+  root.setProperty('--stage-w', `${sw}px`);
+  root.setProperty('--stage-h', `${sh}px`);
+  // 介面字級跟著舞台寬度走，但有上下限（手機上不能太小）。
+  const fs = Math.max(11, Math.min(20, sw / 62));
+  root.setProperty('--fs', `${fs.toFixed(2)}px`);
+  stage.classList.toggle('narrow', vw < 900);
+  stage.classList.toggle('tiny', vw < MIN_W);
+  app.stageScale = scale;
+}
+
+// ---- 場景管理 ----
+const scenes = createSceneManager({
+  mount(root) { uiRoot.appendChild(root); },
+  unmount(root) { root.remove(); },
+  setVisible(root, on) { root.classList.toggle('hidden', !on); },
+});
+
+const store = createSaveStore(probeLocalStorage());
+
+const app = {
+  W, H, canvas, ctx, scenes, store, params,
+  stageScale: 1,
+  input: null,
+  /** 播音效。音訊系統在之後的階段接上。 */
+  sfx() {},
+  /** 場景工廠表。之後的階段把真正的場景註冊進來。 */
+  routes: {},
+  /** 依名稱前往場景。名稱可以帶參數，例如 'level:3'。 */
+  go(name) {
+    const [key, arg] = String(name).split(':');
+    const make = app.routes[key];
+    if (make) {
+      const sc = make(app, arg);
+      if (sc) { scenes.push(sc); return sc; }
+    }
+    return scenes.push(createPlaceholderScene(app, name));
+  },
+};
+
+app.input = createInput(canvas, W, H, (evt) => scenes.input(evt));
+
+window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', layout);
+layout();
+
+// ---- 主迴圈 ----
+// 場景自己決定固定步長（經營 50ms、小鋼珠 1/120 秒、賽車 1/60 秒）。這裡只給每個畫面的時間。
+function isPortraitBlocked() {
+  return window.matchMedia('(orientation: portrait) and (max-width: 600px)').matches;
+}
+startLoop((dt) => {
+  if (isPortraitBlocked()) return; // 直向時暫停
+  scenes.update(dt);
+  scenes.render(ctx);
+});
+
+// ---- 起始場景 ----
+if (params.scene === 'menu') scenes.push(createMainMenuScene(app));
+else if (params.scene) { scenes.push(createMainMenuScene(app)); app.go(params.scene); }
+else scenes.push(createTitleScene(app));
+
+if (store.consumeUnavailableNotice()) toast(t('save.unavailable'), 6000);
+
+// ---- 除錯介面 ----
+// 每個場景可以提供 debug 物件：{ state(), step(n), act(a), useBot(name), mini() }
+if (debug) {
+  const call = (fn, ...args) => {
+    const top = scenes.top();
+    const d = top && top.debug;
+    return d && d[fn] ? d[fn](...args) : null;
+  };
+  window.__sushi = {
+    state: () => call('state'),
+    scene: () => (scenes.top() ? scenes.top().name : ''),
+    scenes: () => scenes.names(),
+    step: (ticks) => call('step', ticks),
+    act: (action) => call('act', action),
+    useBot: (name) => call('useBot', name),
+    mini: () => call('mini'),
+    app,
+  };
+  document.documentElement.classList.add('debug');
+}
+
+export { app, createStepper };

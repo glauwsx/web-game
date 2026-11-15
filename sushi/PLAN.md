@@ -1196,14 +1196,30 @@ flowchart TD
 
 照順序做。每個階段結束時遊戲都要能開、不能壞。
 
+### 交接備註（給接手的執行模型）
+
+每完成一個階段就更新這一段。接手時先讀這裡，再從第一個沒打勾的項目繼續。
+
+- 開發分支：`claude/confident-cerf-1nyqeu`。每個階段提交一次並推送。
+- 跑測試：`cd sushi && npm test`（單元）、`npm run e2e`（端對端，可加名稱過濾，例如 `node tests/run-e2e.mjs smoke`）。
+- 端對端測試的共用工具在 `tests/e2e-util.mjs`（`runE2E`、`waitScene`）。新測試照 `tests/e2e/smoke.mjs` 的寫法。
+- 已定案的基礎設計（階段 0）：
+  - 場景是普通物件：`{ name, root, overlay, enter, exit, pause, resume, update(dtMs), render(ctx), input(evt), debug }`。`root` 是場景自己的 DOM 節點，由場景管理器掛到 `#ui`。
+  - `app`（在 `src/main.js`）是共用的環境物件：`app.scenes`、`app.input`、`app.store`、`app.params`、`app.sfx(name)`、`app.go('名稱:參數')`。新場景用 `app.routes.名稱 = (app, 參數) => 場景` 註冊。沒註冊的名稱會進佔位場景。
+  - 場景自己用 `createStepper(步長毫秒)` 做固定步長。主迴圈只給每個畫面的經過時間。
+  - `window.__sushi` 把呼叫轉給最上層場景的 `debug` 物件（`state`、`step`、`act`、`useBot`、`mini`）。
+  - 亂數狀態是 `{ s }`，用 `rngCreate(seed)` 建立，函式都是 `rngXxx(狀態, ...)`。
+  - 顯示文字一律加到 `src/data/strings.js`，用 `t('鍵', 參數)` 取。
+  - DOM 用 `src/ui/dom.js` 的 `h()` 建立。`#ui` 本身不擋滑鼠，要擋的元件加 `solid` 類別（按鈕自動會擋）。
+
 ### 階段 0：骨架與基礎
 
-- [ ] 建立目錄結構、`package.json`、`tests/serve.mjs`、`tests/pw.mjs`。
-- [ ] `core/rng.js`、`core/loop.js`、`core/scenes.js`、`core/input.js`、`core/save.js`。
-- [ ] `index.html`：畫布縮放、DOM 介面層、手機直向提示。
-- [ ] 標題畫面和主選單（按鈕先接到佔位場景）。
-- [ ] 除錯網址參數和 `window.__sushi` 的骨架。
-- [ ] 單元測試 1；端對端測試 `smoke.mjs`、`portrait.mjs`。
+- [x] 建立目錄結構、`package.json`、`tests/serve.mjs`、`tests/pw.mjs`。
+- [x] `core/rng.js`、`core/loop.js`、`core/scenes.js`、`core/input.js`、`core/save.js`。
+- [x] `index.html`：畫布縮放、DOM 介面層、手機直向提示。
+- [x] 標題畫面和主選單（按鈕先接到佔位場景）。
+- [x] 除錯網址參數和 `window.__sushi` 的骨架。
+- [x] 單元測試 1；端對端測試 `smoke.mjs`、`portrait.mjs`。
 
 驗收：兩種尺寸都看得到主選單，沒有 console 錯誤。
 

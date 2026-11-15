@@ -1,0 +1,171 @@
+/* 介面樣式：木頭和和紙的配色。字體用系統字體。 */
+:root {
+  --wood-dark: #4a2f1c;
+  --wood: #7a4f2e;
+  --wood-light: #b98552;
+  --washi: #f6ecd4;
+  --washi-dark: #e6d6b2;
+  --ink: #2b1d12;
+  --ink-soft: #6b5440;
+  --red: #b5402f;
+  --red-dark: #8a2c20;
+  --indigo: #2f4270;
+  --gold: #e2a93b;
+  --green: #5d8c3c;
+  --stage-w: 960px;
+  --stage-h: 540px;
+  --fs: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #17110c;
+  color: var(--ink);
+  font-family: "PingFang TC", "Noto Sans TC", "Noto Sans CJK TC", "Microsoft JhengHei", "Heiti TC", system-ui, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  background: #000;
+  font-size: var(--fs);
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* DOM 介面層蓋在畫布上。本身不擋滑鼠，裡面的元件才擋。 */
+#ui { position: absolute; inset: 0; pointer-events: none; }
+#ui > .scene { position: absolute; inset: 0; pointer-events: none; }
+#ui > .scene.hidden { display: none; }
+#ui .solid, #ui button, #ui input, #ui select, #ui label { pointer-events: auto; }
+
+#toasts {
+  position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 0.4em; align-items: center;
+  pointer-events: none; z-index: 50; width: 80%;
+}
+.toast {
+  background: rgba(43, 29, 18, 0.92); color: var(--washi);
+  padding: 0.5em 1em; border-radius: 0.6em; font-size: 0.9em;
+  border: 1px solid var(--wood-light);
+  transition: opacity 0.4s; text-align: center;
+}
+.toast.out { opacity: 0; }
+
+/* 手機直向：請玩家轉橫。 */
+#rotate {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: var(--wood-dark); color: var(--washi);
+  flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  font-size: 22px; font-weight: 700; letter-spacing: 0.1em;
+}
+.rotate-icon {
+  width: 56px; height: 96px; border: 5px solid var(--washi); border-radius: 12px;
+  animation: rotate-hint 2s ease-in-out infinite;
+}
+@keyframes rotate-hint {
+  0%, 20% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+@media (orientation: portrait) and (max-width: 600px) {
+  #rotate { display: flex; }
+  #stage { visibility: hidden; }
+}
+
+/* 共用元件 */
+button {
+  font: inherit; color: inherit; cursor: pointer;
+  min-width: 40px; min-height: 40px;
+  touch-action: manipulation;
+}
+.btn {
+  background: linear-gradient(#c9945c, #a8733f);
+  color: #fff8e8;
+  border: 2px solid var(--wood-dark);
+  border-radius: 0.6em;
+  padding: 0.45em 1em;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0.2em 0 var(--wood-dark);
+  transition: transform 0.05s, box-shadow 0.05s, filter 0.1s;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: translateY(0.15em); box-shadow: 0 0.05em 0 var(--wood-dark); }
+.btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.btn.red { background: linear-gradient(#cf5a45, #a83a29); }
+.btn.indigo { background: linear-gradient(#4a62a0, #2f4270); }
+.btn.plain {
+  background: var(--washi); color: var(--ink); text-shadow: none;
+  border-color: var(--wood); box-shadow: 0 0.2em 0 var(--wood);
+}
+.btn:disabled { filter: grayscale(0.7) brightness(0.85); cursor: default; }
+
+.panel {
+  background: var(--washi);
+  border: 3px solid var(--wood);
+  border-radius: 0.8em;
+  box-shadow: 0 0.3em 0 rgba(0, 0, 0, 0.35), inset 0 0 0 2px var(--washi-dark);
+  padding: 1em;
+}
+
+/* 標題畫面 */
+.title-scene { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.title-box { text-align: center; margin-top: -4%; }
+.title-name {
+  font-size: 4.2em; font-weight: 900; letter-spacing: 0.12em; color: #fff4dc;
+  text-shadow: 0 0.06em 0 var(--red-dark), 0 0.12em 0 var(--wood-dark), 0 0 0.5em rgba(0, 0, 0, 0.6);
+  line-height: 1.1;
+}
+.title-sub {
+  display: inline-block; margin-top: 0.5em;
+  font-size: 1.9em; font-weight: 900; letter-spacing: 0.35em; padding: 0.15em 0.6em 0.15em 0.95em;
+  background: var(--red); color: #fff4dc; border: 3px solid #fff4dc; border-radius: 0.3em;
+  transform: rotate(-2deg);
+  box-shadow: 0 0.15em 0 var(--wood-dark);
+}
+.title-start {
+  margin-top: 2.2em; font-size: 1.15em; font-weight: 700; color: #fff4dc;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+  animation: blink 1.4s steps(2, jump-none) infinite;
+}
+.title-note {
+  position: absolute; right: 1em; bottom: 0.6em; font-size: 0.75em; color: rgba(255, 244, 220, 0.75);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+}
+@keyframes blink { 0% { opacity: 1; } 100% { opacity: 0.25; } }
+
+/* 選單 */
+.menu-scene { display: flex; align-items: center; justify-content: center; }
+.menu-panel { min-width: 46%; max-width: 80%; max-height: 92%; overflow: auto; text-align: center; }
+.menu-title {
+  font-size: 1.5em; font-weight: 900; letter-spacing: 0.15em; margin: 0 0 0.7em;
+  color: var(--red-dark); border-bottom: 2px dashed var(--wood-light); padding-bottom: 0.4em;
+}
+.menu-list { display: flex; flex-direction: column; gap: 0.7em; }
+.menu-item { display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.55em 1.2em; font-size: 1.15em; }
+.menu-item small { font-size: 0.68em; font-weight: 400; opacity: 0.92; }
+.menu-foot { margin-top: 0.9em; display: flex; justify-content: center; gap: 0.6em; }
+.menu-body { margin: 0.5em 0 1em; line-height: 1.6; }
