@@ -1212,6 +1212,15 @@ flowchart TD
   - 顯示文字一律加到 `src/data/strings.js`，用 `t('鍵', 參數)` 取。
   - DOM 用 `src/ui/dom.js` 的 `h()` 建立。`#ui` 本身不擋滑鼠，要擋的元件加 `solid` 類別（按鈕自動會擋）。
 
+- 已定案的美術與繪圖設計（階段 1）：
+  - 像素圖全部用程式畫（`src/data/sprites/pixgrid.js` 的工具），輸出成計劃書 6.1 的資料格式。總表在 `src/data/sprites/index.js`（`STATIC_SPRITES`、`characterFrames(id)`）。
+  - 角色外觀參數在 `src/data/characters.js`（`CAST_LOOKS`、`CUSTOMER_LOOKS`）。一般顧客的角色 id 是「類型.編號」，例如 `tourist.0`。
+  - 新增像素圖時要同時加 `sprite.名稱` 字串（單元測試會檢查），圖鑑頁會自動列出。小遊戲的圖用 `pk.`、`race.` 開頭。
+  - 繪圖入口是 `src/iso/render.js` 的 `drawScene(ctx, cam, shop, items)`。`items` 的格式寫在函式註解。角色基本畫格朝左下（+gy），用 `facingFromDelta` 算 `back`、`flip`。
+  - 店面慣例：後牆在 `gx = 0` 和 `gy = 0`。入口在前緣 `gy = h`，位置是 `shop.door.gx`。街道在 `gy ≥ h` 那一側。
+  - 坐著的角色要自己給 `depth`（家具深度鍵 + 0.005）和 `z`，否則會被家具蓋住。見 `src/modes/demo.js`。
+  - 開發時截圖：`node tools/shot.mjs "<網址參數>" <輸出檔> [寬] [高]`。展示場景是 `?scene=demo`。
+
 ### 階段 0：骨架與基礎
 
 - [x] 建立目錄結構、`package.json`、`tests/serve.mjs`、`tests/pw.mjs`。
@@ -1225,12 +1234,12 @@ flowchart TD
 
 ### 階段 1：等角繪圖與美術
 
-- [ ] `iso/iso.js`、`iso/camera.js`、`iso/sprites.js`、`iso/render.js`。
-- [ ] 紙娃娃角色產生器。第 6.3 節的全部角色。至少 12 種一般顧客。
-- [ ] 瓦片、全部家具、12 種壽司圖示。
-- [ ] `gallery.html`。
-- [ ] 一個展示場景：畫出一間有家具的店，幾個角色沿固定路線走，可以平移縮放。
-- [ ] 單元測試 2。
+- [x] `iso/iso.js`、`iso/camera.js`、`iso/sprites.js`、`iso/render.js`。
+- [x] 紙娃娃角色產生器。第 6.3 節的全部角色。至少 12 種一般顧客。
+- [x] 瓦片、全部家具、12 種壽司圖示。
+- [x] `gallery.html`。
+- [x] 一個展示場景：畫出一間有家具的店，幾個角色沿固定路線走，可以平移縮放。
+- [x] 單元測試 2。
 
 驗收：圖鑑頁列出所有圖。展示場景的前後遮擋正確。把圖鑑頁截圖存到 `screenshots/`，在最後回報裡請使用者檢查角色外觀。
 

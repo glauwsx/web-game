@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>超神田壽司 像素圖圖鑑</title>
+<style>
+  body { margin: 0; padding: 16px 20px 60px; background: #efe4c8; color: #2b1d12;
+    font-family: "PingFang TC", "Noto Sans TC", "Noto Sans CJK TC", "Microsoft JhengHei", system-ui, sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #7a4f2e; }
+  p.note { margin: 0; font-size: 13px; color: #6b5440; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .cell { background: #cfc3a4; border: 1px solid #a8956b; border-radius: 6px; padding: 6px; text-align: center; font-size: 12px; }
+  .cell.dark { background: #5b5262; color: #f6ecd4; }
+  .cell canvas { display: block; margin: 0 auto 4px; image-rendering: pixelated; }
+  .char { background: #d8cdb0; border: 1px solid #a8956b; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+  .char-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .char-name small { font-weight: 400; color: #6b5440; margin-left: 8px; }
+  .frames { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; }
+  .frames .cell { padding: 4px; font-size: 11px; background: #bdb08c; }
+</style>
+</head>
+<body>
+<h1>超神田壽司 像素圖圖鑑</h1>
+<p class="note">所有像素圖放大 4 倍。圖像全部由程式產生，沒有使用任何官方素材。</p>
+<div id="out"></div>
+<script type="module" src="src/gallery.js"></script>
+</body>
+</html>

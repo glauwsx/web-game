@@ -6,6 +6,7 @@ import { createSaveStore, probeLocalStorage } from './core/save.js';
 import { t } from './data/strings.js';
 import { toast } from './ui/dom.js';
 import { createTitleScene, createMainMenuScene, createPlaceholderScene } from './ui/menus.js';
+import { createDemoScene } from './modes/demo.js';
 
 const W = 480;
 const H = 270;
@@ -80,6 +81,8 @@ const app = {
     return scenes.push(createPlaceholderScene(app, name));
   },
 };
+
+app.routes.demo = (a) => createDemoScene(a);
 
 app.input = createInput(canvas, W, H, (evt) => scenes.input(evt));
 
