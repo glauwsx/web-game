@@ -631,7 +631,7 @@ rival(t) = 目標營業額 × 累積(hourCurve, t) × (1 + 小幅擾動)
 店家可以把每一台設定成 1 到 5。1 最緊（顧客難贏），5 最鬆。
 
 - 設定影響「可調整釘子」的間距。
-- 設定影響大獎機率（起始值）：1/40、1/30、1/22、1/16、1/12。
+- 設定影響大獎機率（起始值，已調整）：1/145、1/82、1/49、1/36、1/26。原本是 1/40 到 1/12。
 
 ### 8.4 物理（必須）
 
@@ -639,7 +639,7 @@ rival(t) = 目標營業額 × 累積(hourCurve, t) × (1 + 小幅擾動)
 - 起始值：重力 900、彈珠半徑 3、釘子半徑 1.5、釘子彈性係數 0.5、牆壁彈性係數 0.4。
 - 彈珠和彈珠之間不碰撞。每顆彈珠獨立計算。
 - 每顆彈珠的實際力道 = 旋鈕值 + 漂移 + 機台抖動。
-  - 機台抖動：常態分布，標準差 0.008。來自種子亂數。
+  - 機台抖動：常態分布，標準差 0.005（原本 0.008。為了滿足 8.7 的表調小，見交接備註）。來自種子亂數。
   - 漂移：一次遊玩中緩慢變化的偏移，範圍 ±0.03。來自種子亂數。玩家要邊玩邊微調。
 - 必須保證：彈珠不會穿過釘子或牆壁；每顆彈珠在 20 秒模擬時間內一定結束（進洞或出界）。卡住的彈珠要被偵測並輕推。
 - 提供純函式：`simulateBall(board, nailSetting, power, rng) → 結果代號`。小遊戲畫面和統計表都用它。
@@ -1196,6 +1196,84 @@ flowchart TD
 
 照順序做。每個階段結束時遊戲都要能開、不能壞。
 
+### 接手須知（階段 4 做到一半時交接）
+
+**目前進度**：階段 0 到 3 完成。階段 4、5 裡「困難的純邏輯」已經做完並通過測試。剩下的是畫面、操作、經營整合、關卡資料。`npm test` 67 項全過，`npm run e2e` 4 個全過。
+
+**已經做完、不要重做的部分**
+
+1. 小鋼珠物理 `src/mini/pachinko/physics.js`：`compileBoard`、`createBall`、`stepBall`、`simulateBall`、`jitterPower`。
+2. 小鋼珠檯面 `src/data/pachinko-boards.js`（板前檯面）和統計表 `src/data/pachinko-table.js`。回饋率五個設定全部在 8.7 的範圍內。
+3. 小鋼珠 AI `src/mini/pachinko/ai.js`：`tableFor`、`simulatePlay`（AI 顧客玩一次）、`expectedPayout`、`PRIZE_VALUE`。
+4. 賽車物理 `src/mini/race/physics.js`：`createRace`、`stepRace`、`playerCar`、`standings`、`placeOf`。
+5. 賽車 AI `src/mini/race/ai.js`：`aiPlace`（AI 顧客名次公式）、`prizeForPlace`、`autopilotInput`、`runAutopilot`。
+6. 賽道資料 `src/data/tracks.js`：3 條賽道。每段有 `curve`、`y`。`track.itemAt[段]` 是水灘或加速板，`track.scenery[段]` 是路邊景物。
+
+**動到下面這些東西之後，一定要重跑對應的測試**
+
+- 改 `physics.js`（小鋼珠）、檯面資料、`PACHINKO` 常數 → 重跑 `node tools/gen-pachinko-table.mjs`（會覆寫統計表），再跑 `npm test`。物理只要改一點點，回饋率就會變。
+- 改賽道的彎度、`RACE` 常數、`autopilotInput` → 跑 `node --test tests/unit/race.test.js`。賽道最急的彎度不可以超過 3.2。原因：`速度比例 × 彎度 × 0.3` 超過 1 時，轉向抵不過離心力，固定速度的自動駕駛會被甩出去，驗收 9.8-1 會失敗。
+
+**小鋼珠檯面是怎麼調出來的（階段 7 做第 2 個檯面時照這個做）**
+
+- 回饋率表要求「職業玩家 ÷ 一般客」大約 5 到 6 倍、「小鋼珠迷 ÷ 一般客」大約 1.4 到 1.5 倍。做法是：力道對價值的曲線有一個很尖的峰（只有 2 個區間寬），加上兩側釘林的一點點基本價值。
+- 峰：彈珠落點由力道決定（`launch.vx1` 是斜率）。正中間的「天釘」開口通到中央通道，通道裡的啟動口幾乎都會進。所以峰值幾乎全部來自大獎。
+- 峰的位置要落在統計表區間的正中間（`aim: 0.5015`），否則峰會被分到兩個區間，變寬。
+- 兩側的入賞口上方有「屋簷板」（一小片橫牆）。板子越寬越難進。不可以用「兩根釘子夾一個窄縫」來降低機率：只要彈珠擠得過去，兩根釘子就是漏斗，進洞率反而更高。
+- 縮放旋鈕是大獎機率 `PACHINKO.JACKPOT`：峰值跟它成正比。兩側的基本價值用 `cPlate`、`dPlate` 調。
+- 工具：`node tools/tune-pachinko.mjs '<參數>' 300 '<大獎機率分母>'` 很快印出五個設定的結果。`node tools/pachinko-debug.mjs` 輸出檯面形狀和彈道的 JSON，可以自己畫出來看。
+- 第 2 個檯面如果需要不同的大獎機率：目前 `JACKPOT` 是全域的。可以改成每個檯面自己帶（在檯面資料加 `jackpot` 陣列，`ai.js` 的 `binValue` 和 `sampleBall` 改成從 `tb` 讀）。
+- 抽樣測試（2,000 次遊玩）用固定種子。期望值離範圍邊緣太近時，換種子可能會失敗。調的時候盡量讓期望值落在範圍中間。
+
+**階段 4 剩下的工作（照這個順序）**
+
+1. `mini/pachinko/render.js` 和 `game.js`：可玩的場景。
+   - 用 `compileBoard(board, setting)` 拿形狀：`geom.nails`（x、y 交錯的陣列）、`geom.walls`（每 4 個數字一道牆）、`geom.pockets`（含 `plate`）。
+   - 每顆彈珠：`createBall(geom, jitterPower(旋鈕值 + 漂移, rng))`，每 1/120 秒呼叫 `stepBall(geom, ball, rng)`，直到 `ball.done`。`ball.foul` 是力道太弱沒射上去。`ball.hitSpeed` 可以拿來決定撞釘子的音量。
+   - 漂移：每射一顆，漂移值隨機變動最多 `DRIFT_STEP`，限制在 `±DRIFT_MAX`。用種子亂數。
+   - 重要：有效的力道範圍很窄。低於大約 0.42 射不上去，高於大約 0.59 會打到左上角。甜蜜點在 0.50 附近，寬度只有大約 ±0.008。所以旋鈕的操作要細：方向鍵一次 0.005，按住 Shift 一次 0.001。畫面上要有放大的力道刻度，並顯示上一顆的落點，玩家才調得動。旋鈕預設值建議 0.46。
+   - 檯面 200×300，畫布高 270：整個檯面縮小到 0.88 倍，或用捲動。發射軌道畫在 x 184 到 196（純動畫，物理從 `launch` 的位置開始）。
+   - 進啟動口（結果 `S`）：轉滾輪，用 `PACHINKO.JACKPOT[設定 − 1]` 的機率中大獎。
+   - `debug.mini()` 要回傳小遊戲狀態（剩餘彈珠、各入賞口次數、是否結束），端對端測試 `pachinko.mjs` 會用。
+2. 經營整合（`sim/` 裡新增一個檔，例如 `sim/machines.js`）：
+   - 小鋼珠台的欄位已經在 `addFurniture` 建好：`nail`、`fee`、`board`、`wom`（口碑的紀錄）、`income`、`payout`。
+   - 顧客要不要玩：照 8.5 的公式。`pachinkoFan` 一定想玩。顧客的 `c.goal`、`c.plays`、`c.played`、`c.fees`、`c.prizes` 已經預留。入場費記在 `c.fees`，結帳時 `settleCustomer` 會算進 `day.fees`。
+   - 玩一次：`simulatePlay(tableFor(PACHINKO_TABLE, 檯面id, 設定), 設定, PACHINKO.HAND_SD[類型], state.rng)`。回傳各入賞口的次數和價值。
+   - 獎品：每個入賞口一貫對應等級的壽司，大獎是特上拼盤。用 `createOrder(state, c, 品項, { prize: true })` 排進師傅的佇列（會扣庫存、不收錢）。品項從菜單上有庫存的該等級隨機選，沒有就降一級，全部沒有就發招待券並扣 `REP_COUPON`。
+   - 新增顧客狀態 `play`（佔用機台 5 分鐘）和 `prize`（在原位吃獎品）。`shop-scene.js` 的 `SEATED` 已經包含這兩個。
+   - 新操作：`setNail`、`setFee`。加到 `shop.js` 的 `ACTIONS`。介面用 `facilitySections` 加到「設施」分頁，用 `furnitureInfo.pachinko` 做浮窗。
+   - 試玩：從設施分頁按鈕把小鋼珠場景 `push` 上去。場景堆疊會自動暫停經營模擬。
+3. 職業玩家：用 `registerEvent('pro', ...)`。三種對策照 10.1。「親自應戰」的目標成績用種子預先算（`simulatePlay` 用 `sd = 0`）。
+4. 第 4、5 關的資料、對話、提示。照 `data/levels.js` 前 3 關的格式。對話要自己寫，風格跟前 3 關一致。
+5. 單元測試 9 的職業玩家部分、端對端測試 `pachinko.mjs`。
+
+**階段 5 剩下的工作**
+
+1. `mini/race/render.js`：偽 3D。標準做法：從鏡頭所在的路段往前取 150 到 200 段，累加 `curve` 得到水平偏移，用 `y` 做高度投影，由遠到近畫梯形。路肩和分隔線每 3 段換深淺色。對手車的位置是 `car.z`（這一圈的距離）、`car.lap`、`car.x`（−1 到 1 是路面）。路邊景物在 `x = ±SCENERY_X`。景物、車子的像素圖要自己用 `pixgrid.js` 畫，名稱用 `race.` 開頭，並加 `sprite.race.xxx` 字串。
+2. `mini/race/game.js`：每 1/60 秒呼叫 `stepRace(race, { steer, accel, brake, boost })`。`boost` 只在按下的那一步傳 `true`。`race.events` 有 `boost`、`pad`、`puddle`、`bump`、`crash`，拿來播音效。`race.over` 之後看 `playerCar(race).place` 和 `.integrity`。
+   - 設定裡的 `autoAccel`（已經存在 `app.settings`）：開啟時 `accel` 永遠是 `true`。
+   - 除錯用自動駕駛：`autopilotInput(race, playerCar(race), 1.0)`。端對端測試 `race.mjs` 用它跑完一場。
+   - 觸控：左下方左右鈕、右下方油門、煞車、噴射鈕。用 `app.input.setVirtual(code, down)`。
+   - 顧客版本的角色數值差異：`createRace({ stats: { accel, top, handling } })`，各在 0.95 到 1.05。
+3. 經營整合：`aiPlace(aiSkill(類型, rng), 壽司車等級, rng)` 算名次，`prizeForPlace` 換成獎品。賽道的欄位 `level`、`fee`、`track`、`race` 已經建好。一場最多 4 位顧客，第一位報名後等 1 分鐘開賽，佔用 4 分鐘。經營畫面上的小車用 `furnitureDraw.raceTrack` 畫。
+4. 修馬哈事件、第 6、7 關、單元測試 9 的修馬哈部分、端對端測試 `race.mjs`、效能檢查（9.8-3）。
+
+**階段 6 的注意事項（平衡）**
+
+- `good` 自動玩家的雛形在階段 3 試過：本田排外場、庫存低於 12 就補 20、部長出現就變裝、離開就解除、量表滿就發動。這樣第 2、3 關 20/20 過關。
+- 已知的槓桿：`baseArrival`、座位數（一位師傅大約應付 6 到 8 個座位）、庫存上限 200（要過高目標一定要補貨）、目標營業額。
+- 第 1 關 naive 目前 17/20，剛好在 80% 邊緣。`good` 也是 17/20，不到 90%。要把第 1 關的 `baseArrival` 調高一點或把目標調低。
+- 第 2 關目標偏低，要調高到大約 ¥50,000 才有挑戰。
+- 第 3 關生氣離開的客人還是偏多（一天大約 26 人），三星很難拿。可以再減少來客或增加一位外場。
+- 小鋼珠和賽車的獎品會消耗高級食材。職業玩家一次遊玩平均拿走價值 ¥1,700 的壽司（設定 3）。這是設計好的劇情。
+
+**其他要記得的事**
+
+- 計劃書裡被我改過的起始值：排隊上限 5 組、機台抖動 0.005、大獎機率、山葵山道彎度。階段 9 要把全部調整過的數值整理進計劃書和 `README.md`。
+- 還沒做的小東西：設定畫面的「匯出、匯入無限模式存檔」（階段 7）、音樂（階段 9）、標題畫面換成等角店面圖（可做可不做）。
+- 最後回報時要請使用者確認第 19 節的 5 個項目，並請使用者看 `screenshots/gallery.png` 檢查角色外觀。
+- 自己決定、計劃書沒寫的規則都要寫進 `README.md`：送餐的托盤規則、耐心是單次等待、吃一貫 3 分鐘、排隊離開整組只扣一次評價、小鋼珠力道太弱會射不上去。
+
 ### 交接備註（給接手的執行模型）
 
 每完成一個階段就更新這一段。接手時先讀這裡，再從第一個沒打勾的項目繼續。
@@ -1288,22 +1366,22 @@ flowchart TD
 
 ### 階段 4：小鋼珠，第 4、5 關
 
-- [ ] `mini/pachinko/` 全部。第 1 個檯面。
-- [ ] `tools/gen-pachinko-table.mjs` 和統計表。
+- [ ] `mini/pachinko/` 全部。第 1 個檯面。（已完成：`physics.js`、`ai.js`、檯面資料。還沒做：`game.js`、`render.js`）
+- [x] `tools/gen-pachinko-table.mjs` 和統計表。
 - [ ] 經營模擬整合：小鋼珠台設施、AI 顧客遊玩、口碑、試玩。
 - [ ] 職業玩家與三種對策。應戰流程。
 - [ ] 第 4、5 關。
-- [ ] 單元測試 9（職業玩家部分）、10、11、12；端對端測試 `pachinko.mjs`。
+- [ ] 單元測試 9（職業玩家部分）、10、11、12；端對端測試 `pachinko.mjs`。（已完成：10、11、12）
 
 驗收：第 8.7 節的回饋率表通過。親手玩一局手感正常：彈珠運動自然，調力道有明顯差別。
 
 ### 階段 5：賽車，第 6、7 關
 
-- [ ] `mini/race/` 全部。3 條賽道。
+- [ ] `mini/race/` 全部。3 條賽道。（已完成：`physics.js`、`ai.js`、3 條賽道的資料。還沒做：`game.js`、`render.js`）
 - [ ] 經營模擬整合：賽道設施、AI 顧客參賽、經營畫面上的小車、試玩。
 - [ ] 修馬哈與三種對策。應戰流程。
 - [ ] 第 6、7 關。
-- [ ] 單元測試 9（修馬哈部分）、13；端對端測試 `race.mjs`。
+- [ ] 單元測試 9（修馬哈部分）、13；端對端測試 `race.mjs`。（已完成：13）
 
 驗收：第 9.8 節通過。親手玩一場有速度感，彎道和坡道表現正確。
 
