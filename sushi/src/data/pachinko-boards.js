@@ -31,24 +31,47 @@ function field(x0, x1, y0, y1, sx, sy, keep) {
   return out;
 }
 
-// 板前檯面的參數。調整這些數字來滿足回饋率表（計劃書 8.7）。
+// 檯面的參數。調整這些數字來滿足回饋率表（計劃書 8.7）。
 // 陣列是釘子設定 1 到 5 的值。
-export const ITAMAE_PARAMS = {
-  slope: 3000,                           // 力道對水平速度的斜率
-  aim: 0.5015,                           // 落在天釘正中間的力道（讓峰值落在統計表區間 0.50–0.51 的正中間）
-  lane: 14,                              // 中央通道的半寬
-  gate: [9.1, 9.1, 9.1, 9.1, 9.1],       // 天釘的半距
-  split: 76,                             // 通道入口下方分流釘的高度
-  sGuard: [8, 8.25, 8.5, 8.75, 9],       // 命釘（啟動口上方兩根釘子）的半距
-  plateUp: 8,                            // 屋簷板比開口高幾像素
-  aPlate: [5, 5, 5, 5, 5],               // 各入賞口屋簷板的半寬。越窄越容易進
-  bPlate: [12, 12, 12, 12, 12],
-  cPlate: [5, 4.5, 4, 3.5, 3],
-  dPlate: [3, 2.75, 2.5, 2.25, 2],
+export const BOARD_PARAMS = {
+  // 板前：第 1 個檯面
+  itamae: {
+    slope: 3000,                           // 力道對水平速度的斜率
+    aim: 0.5015,                           // 落在天釘正中間的力道（讓峰值落在統計表區間 0.50–0.51 的正中間）
+    lane: 14,                              // 中央通道的半寬
+    gate: [9.1, 9.1, 9.1, 9.1, 9.1],       // 天釘的半距
+    split: 76,                             // 通道入口下方分流釘的高度
+    sGuard: [8, 8.25, 8.5, 8.75, 9],       // 命釘（啟動口上方兩根釘子）的半距
+    plateUp: 8,                            // 屋簷板比開口高幾像素
+    aPlate: [5, 5, 5, 5, 5],               // 各入賞口屋簷板的半寬。越窄越容易進
+    bPlate: [12, 12, 12, 12, 12],
+    cPlate: [5, 4.5, 4, 3.5, 3],
+    dPlate: [3, 2.75, 2.5, 2.25, 2],
+    fieldSx: 14, fieldSy: 12,              // 兩側釘林的橫向、縱向間距
+    bX: 20.5, cX: 46, dX: 72,              // B、C、D 入賞口離中線多遠
+    jackpot: null,                         // 大獎機率。null 代表用 balance.js 的 PACHINKO.JACKPOT
+  },
+  // 祭典：第 2 個檯面（無限模式研發後解鎖）。甜蜜點的力道不一樣，釘林比較密，入賞口比較靠外
+  matsuri: {
+    slope: 2800,
+    aim: 0.5515,
+    lane: 13,
+    gate: [9.1, 9.1, 9.1, 9.1, 9.1],
+    split: 78,
+    sGuard: [7.5, 7.75, 8, 8.25, 8.5],
+    plateUp: 8,
+    aPlate: [5, 5, 5, 5, 5],
+    bPlate: [12, 12, 12, 12, 12],
+    cPlate: [5, 4.5, 4, 3.5, 4.5],
+    dPlate: [3, 2.75, 2.5, 2.25, 3],
+    fieldSx: 12, fieldSy: 14,
+    bX: 22, cX: 50, dX: 74,
+    jackpot: [1 / 170, 1 / 90, 1 / 54, 1 / 38, 1 / 26.5],
+  },
 };
 
-export function buildItamae(o = {}) {
-  const q = { ...ITAMAE_PARAMS, ...o };
+/** 用一組參數建立檯面。 */
+export function buildBoard(id, q) {
   const LANE = q.lane;
   const nails = [];
   const walls = [
@@ -79,31 +102,30 @@ export function buildItamae(o = {}) {
   nails.push({ x: CX, y: 214 });
   // 兩側的釘林
   const inLane = (x) => Math.abs(x - CX) < LANE + 5;
-  nails.push(...field(15, 177, 84, 216, 14, 12, (x) => !inLane(x) && x > 12 && x < 178));
+  nails.push(...field(15, 177, 84, 216, q.fieldSx, q.fieldSy, (x) => !inLane(x) && x > 12 && x < 178));
   const plates = { A: q.aPlate, B: q.bPlate, C: q.cPlate, D: q.dPlate };
   const pockets = [
     { kind: 'S', x: CX, y: 106, w: 9.5, depth: 8 },
     { kind: 'A', x: CX, y: 190, w: 9.5, depth: 8 },
-    { kind: 'B', x: CX - 20.5, y: 234, w: 9.5 },
-    { kind: 'B', x: CX + 20.5, y: 234, w: 9.5 },
-    { kind: 'C', x: CX - 46, y: 250, w: 9.5 },
-    { kind: 'C', x: CX + 46, y: 250, w: 9.5 },
-    { kind: 'D', x: CX - 72, y: 264, w: 9.5 },
-    { kind: 'D', x: CX + 72, y: 264, w: 9.5 },
+    { kind: 'B', x: CX - q.bX, y: 234, w: 9.5 },
+    { kind: 'B', x: CX + q.bX, y: 234, w: 9.5 },
+    { kind: 'C', x: CX - q.cX, y: 250, w: 9.5 },
+    { kind: 'C', x: CX + q.cX, y: 250, w: 9.5 },
+    { kind: 'D', x: CX - q.dX, y: 264, w: 9.5 },
+    { kind: 'D', x: CX + q.dX, y: 264, w: 9.5 },
   ];
   // 入賞口上方的屋簷板。彈珠不能從正上方直接掉進去
   for (const pk of pockets) if (plates[pk.kind]) pk.plate = { up: q.plateUp, half: plates[pk.kind] };
   return {
-    id: 'itamae',
+    id,
     w: 200, h: 300, outY: 292,
+    jackpot: q.jackpot || null,
     // 落在天釘正中間時水平速度是 253.4。slope 越大，力道差一點落點就差越多
     launch: { x: 176, y: 16, vx0: 253.4 - q.slope * q.aim, vx1: q.slope, vxMin: 15 },
     nails, walls, pockets,
   };
 }
 
-export const BOARDS = {
-  itamae: buildItamae(),
-};
-
-export const BOARD_ORDER = ['itamae'];
+export const BOARD_ORDER = ['itamae', 'matsuri'];
+export const BOARDS = {};
+for (const id of BOARD_ORDER) BOARDS[id] = buildBoard(id, BOARD_PARAMS[id]);

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { BOARDS, BOARD_ORDER } from '../src/data/pachinko-boards.js';
 import { PACHINKO as P } from '../src/data/balance.js';
 import { simulateBall } from '../src/mini/pachinko/physics.js';
-import { bestPower, expectedPayout, binValue, POCKET_KINDS } from '../src/mini/pachinko/ai.js';
+import { bestPower, expectedPayout, binValue, jackpotChance, POCKET_KINDS } from '../src/mini/pachinko/ai.js';
 import { rngCreate, rngFloat } from '../src/core/rng.js';
 
 const dry = process.argv.includes('--dry');
@@ -31,7 +31,7 @@ export function buildSetting(board, setting, n, seed = TABLE_SEED) {
     }
     counts.push(row);
   }
-  return { counts, best: bestPower(counts, n, setting) };
+  return { counts, best: bestPower(counts, n, jackpotChance(board.id, setting)) };
 }
 
 // 計劃書 8.7 的回饋率範圍
@@ -46,10 +46,11 @@ function report(boardId, settings, n) {
   console.log(`\n檯面 ${boardId}（每區間 ${n} 顆）`);
   settings.forEach((st, i) => {
     const setting = i + 1;
-    const tb = { counts: st.counts, best: st.best, n };
+    const jp = jackpotChance(boardId, setting);
+    const tb = { counts: st.counts, best: st.best, n, jp };
     const parts = [];
     for (const type of ['normal', 'pachinkoFan', 'pro']) {
-      const v = expectedPayout(tb, setting, P.HAND_SD[type]);
+      const v = expectedPayout(tb, P.HAND_SD[type]);
       const [lo, hi] = RANGES[type][i];
       const good = v >= lo && v <= hi;
       if (!good) ok = false;
@@ -57,7 +58,7 @@ function report(boardId, settings, n) {
     }
     const bi = Math.floor(st.best / P.BIN);
     const around = [];
-    for (let k = bi - 4; k <= bi + 4; k++) around.push(k >= 0 && k < BINS ? binValue(st.counts[k], n, setting).toFixed(0) : '-');
+    for (let k = bi - 4; k <= bi + 4; k++) around.push(k >= 0 && k < BINS ? binValue(st.counts[k], n, jp).toFixed(0) : '-');
     const row = st.counts[bi];
     // 兩側釘林的平均價值：離最佳力道 5 到 15 個區間的地方
     let fieldV = 0;
@@ -65,7 +66,7 @@ function report(boardId, settings, n) {
     const fieldC = [0, 0, 0, 0, 0];
     for (let k = bi - 15; k <= bi + 15; k++) {
       if (Math.abs(k - bi) < 5 || k < 0 || k >= BINS) continue;
-      fieldV += binValue(st.counts[k], n, setting); fieldN++;
+      fieldV += binValue(st.counts[k], n, jp); fieldN++;
       st.counts[k].forEach((c, j) => { fieldC[j] += c; });
     }
     console.log(`  設定 ${setting}：最佳力道 ${st.best.toFixed(3)}　${parts.join('　')}`);
