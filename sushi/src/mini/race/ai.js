@@ -1,35 +1,35 @@
 // 賽車的 AI。純邏輯。
-// 1. AI 顧客的名次：不即時跑賽車，用公式決定（計劃書 9.6）。
+// 1. AI 顧客的結果：不即時跑賽車，用公式決定贏過哪幾款壽司（計劃書 9.6）。
 // 2. 自動駕駛：測試用，也是除錯用的「幫我開」。以固定速度比例行駛，走理想路線。
 import { RACE as R } from '../../data/balance.js';
 import { TRACKS } from '../../data/tracks.js';
 import { rngNormal, rngRange } from '../../core/rng.js';
-import { segmentAt, totalDist, createRace, stepRace, playerCar, placeOf } from './physics.js';
+import { SUSHI } from '../../data/sushi.js';
+import { segmentAt, totalDist, createRace, stepRace, playerCar, placeOf, rivalRatio, wonSushi } from './physics.js';
 
-/** AI 顧客的駕駛技術。type：'normal'、'raceFan'、'shumaha'。 */
+/** AI 顧客的駕駛技術（整場的平均速度比例）。type：'normal'、'raceFan'、'shumaha'。 */
 export function aiSkill(type, rng) {
   const [a, b] = R.AI_SKILL[type] || R.AI_SKILL.normal;
   return a === b ? a : rngRange(rng, a, b);
 }
 
 /**
- * AI 顧客的名次。level 是壽司車等級 1 到 5。回傳 1、2、3，或 4（第 4 名以後）。
- * 分數 = 駕駛技術 + 常態分布(0, 0.07) − θ
+ * AI 顧客跑一場，贏過哪幾款壽司。level 是難度 1 到 5。回傳壽司 id 的陣列（照 LINEUP 的順序，可能是空的）。
+ * 這一場的表現 = 駕駛技術 + 常態分布(0, AI_NOISE)。表現比某台壽司車的速度比例高，就贏過那一台。
  */
-export function aiPlace(skill, level, rng) {
-  const score = skill + rngNormal(rng, 0, R.AI_NOISE) - R.THETA[level - 1];
-  if (score > 0.10) return 1;
-  if (score > 0) return 2;
-  if (score > -0.10) return 3;
-  return 4;
+export function aiWon(skill, level, rng) {
+  const perf = skill + rngNormal(rng, 0, R.AI_NOISE);
+  return R.LINEUP.filter((_, i) => perf > rivalRatio(level, i));
 }
 
-/** 名次對應的獎品。 */
-export function prizeForPlace(place) {
-  if (place === 1) return 'set_tokujo';
-  if (place === 2) return 'set_jo';
-  if (place === 3) return 'set_nami';
-  return 'tier1';
+/** 一場的獎品：贏過的每一款各一貫。一台都沒贏過，安慰獎是自己的小黃瓜捲一貫。 */
+export function prizesFor(won) {
+  return won.length ? won.slice() : [R.PLAYER_SUSHI];
+}
+
+/** 獎品的價值（參考售價合計）。 */
+export function prizeValue(prizes) {
+  return prizes.reduce((sum, id) => sum + SUSHI[id].ref, 0);
 }
 
 /**
@@ -78,7 +78,7 @@ export function autopilotInput(race, car, f) {
 }
 
 /**
- * 用自動駕駛跑完一場。回傳 { place, time, integrity, race }。
+ * 用自動駕駛跑完一場。回傳 { place, time, integrity, won, race }。
  * opts 跟 createRace 相同，另外有 f（速度比例）和 avoidPads（不踩加速板，測試固定速度用）。
  */
 export function runAutopilot(opts) {
@@ -87,5 +87,5 @@ export function runAutopilot(opts) {
   const p = playerCar(race);
   const maxSteps = 60 * 600;
   for (let i = 0; i < maxSteps && !race.over; i++) stepRace(race, autopilotInput(race, p, opts.f));
-  return { place: placeOf(race, p), time: p.finishT, integrity: p.integrity, race };
+  return { place: placeOf(race, p), time: p.finishT, integrity: p.integrity, won: wonSushi(race), race };
 }

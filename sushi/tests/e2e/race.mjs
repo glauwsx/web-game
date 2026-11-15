@@ -30,6 +30,8 @@ await runE2E('race', async ({ open, check, shot }) => {
   const m = await page.evaluate(() => window.__sushi.mini());
   check(m.over && m.result && m.result.place >= 1 && m.result.place <= 6, `跑完一場，看到名次（第 ${m.result.place} 名，${m.result.time.toFixed(1)} 秒）`);
   check(/第 \d 名/.test(await page.locator('[data-id="race-place"]').textContent()), '結果畫面顯示名次');
+  check(m.result.won.length === 6 - m.result.place && m.result.prizes.length >= 1, `贏過 ${m.result.won.length} 台壽司車，拿到 ${m.result.prizes.join('、')}`);
+  check((await page.locator('[data-id="race-prize"]').textContent()).length > 0, '結果畫面列出贏到的壽司');
   await shot(page, 'p5-race-result.png');
   await page.click('button[data-id="race-done"]');
   await waitScene(page, 'menu');

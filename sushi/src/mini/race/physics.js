@@ -1,7 +1,9 @@
 // 賽車物理。純邏輯。步長 1/60 秒。
 // 比賽狀態是純 JSON：
 //   race = { track, laps, t, started, over, cars: [...] }
-//   car  = { id, kind: 'player' | 'shop' | 'shumaha', z（這一圈跑了多遠）, lap, x, speed, ratio,
+// 設定：賽車壽司是一台賽車機台。玩家開小黃瓜捲（最便宜的壽司）。對手是其他壽司，越貴的越快。
+// 過終點時贏過哪一台壽司車，就得到那一款壽司（wonSushi）。
+//   car  = { id, kind: 'player' | 'shop' | 'shumaha', sushi（這台車是哪一款壽司）, z（這一圈跑了多遠）, lap, x, speed, ratio,
 //            boosts, boostT, slideT, integrity, hitT, finished, finishT, place, lane, stats }
 import { RACE as R } from '../../data/balance.js';
 import { TRACKS, SCENERY_X } from '../../data/tracks.js';
@@ -21,29 +23,36 @@ export function totalDist(race, car) {
   return car.lap * trackLength(TRACKS[race.track]) + car.z;
 }
 
+/** 難度 level 之下，LINEUP 第 i 台壽司車的最高速度比例。 */
+export function rivalRatio(level, i) {
+  return R.TOP_RATIO[level - 1] - R.RATIO_STEP * (R.LINEUP.length - 1 - i);
+}
+
 /**
  * 建立一場比賽。
- * opts = { track, level（壽司車等級 1–5）, shumaha（對手裡有沒有修馬哈）, laps,
+ * opts = { track, level（難度 1–5）, shumaha（對戰：最快那台換成修馬哈）, laps,
  *          stats: { accel, top, handling }（玩家角色的倍率，預設都是 1）, rivals（對手幾台，預設 5）}
  */
 export function createRace(opts) {
   const track = TRACKS[opts.track];
   const level = opts.level || 3;
-  const n = opts.rivals ?? R.CARS - 1;
+  const n = Math.min(opts.rivals ?? R.LINEUP.length, R.LINEUP.length);
   const cars = [];
+  // 對手少於 LINEUP 的台數時，留下最快的那幾台
+  const skip = R.LINEUP.length - n;
   for (let i = 0; i < n; i++) {
     const isShumaha = !!opts.shumaha && i === n - 1;
-    // 同一場的壽司車速度有一點點差異，排在前面的稍快
-    const ratio = isShumaha ? R.SHUMAHA_RATIO : R.SHOP_RATIO[level - 1] + R.SHOP_SPREAD * ((i / Math.max(1, n - 1)) * 2 - 1);
+    // 越貴的壽司越快，起跑時排在越前面
+    const ratio = isShumaha ? R.SHUMAHA_RATIO : rivalRatio(level, i + skip);
     const lane = [-0.55, 0.55, -0.2, 0.2, 0][i % 5];
     cars.push({
-      id: i + 1, kind: isShumaha ? 'shumaha' : 'shop', z: (i + 1) * R.GRID_GAP, lap: 0, x: lane, lane,
+      id: i + 1, kind: isShumaha ? 'shumaha' : 'shop', sushi: isShumaha ? R.PLAYER_SUSHI : R.LINEUP[i + skip], z: (i + 1) * R.GRID_GAP, lap: 0, x: lane, lane,
       speed: 0, ratio, boosts: isShumaha ? R.BOOSTS : 0, boostT: 0, slideT: 0, integrity: 100, hitT: 0,
       finished: false, finishT: 0, place: 0,
     });
   }
   cars.push({
-    id: 0, kind: 'player', z: 0, lap: 0, x: 0, lane: 0, speed: 0, ratio: 1,
+    id: 0, kind: 'player', sushi: R.PLAYER_SUSHI, z: 0, lap: 0, x: 0, lane: 0, speed: 0, ratio: 1,
     boosts: R.BOOSTS, boostT: 0, slideT: 0, integrity: 100, hitT: 0, offT: 0,
     finished: false, finishT: 0, place: 0,
     stats: { accel: 1, top: 1, handling: 1, ...(opts.stats || {}) },
@@ -184,6 +193,16 @@ export function standings(race) {
 
 export function placeOf(race, car) {
   return standings(race).indexOf(car) + 1;
+}
+
+/**
+ * 玩家目前贏過的壽司車是哪幾款（照 LINEUP 的順序）。比賽結束後就是贏到的壽司。
+ * 比賽中隨時可以呼叫：被追回去的那一款會從清單消失。修馬哈的車不算。
+ */
+export function wonSushi(race) {
+  const order = standings(race);
+  const me = order.indexOf(playerCar(race));
+  return order.slice(me + 1).filter((c) => c.kind === 'shop').sort((a, b) => a.id - b.id).map((c) => c.sushi);
 }
 
 /** 比賽前進一步（1/60 秒）。input 是玩家的操作。玩家過線後比賽結束。 */

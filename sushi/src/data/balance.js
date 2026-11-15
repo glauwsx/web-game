@@ -162,18 +162,19 @@ export const RACE = {
   ITEM_W: 0.28,             // 水灘和加速板的半寬
   INTEGRITY_HIT: 10,
   INTEGRITY_OFFROAD: 5,     // 出界每秒扣多少
-  SHOP_RATIO: [0.80, 0.86, 0.91, 0.95, 0.98], // 壽司車等級 1 到 5 的最高速度比例
-  SHOP_SPREAD: 0.004,       // 同一場裡各台壽司車的速度差
+  // 對手的壽司車，由慢到快。玩家開小黃瓜捲。過終點時贏過哪一台，就得到那一款壽司
+  LINEUP: ['tamago', 'sake', 'maguro', 'ikura', 'otoro'],
+  PLAYER_SUSHI: 'kappa',    // 玩家的車。也是安慰獎：一台都沒贏過，還是吃得到自己的小黃瓜捲
+  TOP_RATIO: [0.88, 0.91, 0.94, 0.97, 1.00], // 難度 1 到 5：最快那台（LINEUP 最後一個）的最高速度比例
+  RATIO_STEP: 0.05,         // 相鄰兩台壽司車的速度比例差
   CURVE_SLOW: 0.02,         // 對手車過彎最多減速多少
   SHUMAHA_RATIO: 1.0,
   GRID_GAP: 300,            // 起跑時前後車的間隔
   FEE: 800,
   FEE_MIN: 500,
   FEE_MAX: 1500,
-  // AI 顧客的名次公式
-  THETA: [0.30, 0.45, 0.58, 0.70, 0.82],
-  AI_NOISE: 0.07,
-  AI_SKILL: { normal: [0.2, 0.6], raceFan: [0.45, 0.8], shumaha: [0.99, 0.99] },
-  RACE_MIN: 4,              // 一場比賽佔用賽道幾遊戲分鐘
-  SIGNUP_MIN: 1,            // 第一位報名後等幾分鐘開賽
+  // AI 顧客的公式：駕駛技術 = 整場的平均速度比例。技術 + 雜訊 > 某台壽司車的速度比例，就贏過那一台
+  AI_NOISE: 0.02,
+  AI_SKILL: { normal: [0.72, 0.94], raceFan: [0.80, 0.96], shumaha: [1.04, 1.04] },
+  RACE_MIN: 4,              // 一場比賽佔用機台幾遊戲分鐘
 };

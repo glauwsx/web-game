@@ -1,12 +1,12 @@
 // 賽車小遊戲的場景。
 // opts = { track, level, shumaha, stats, laps, auto（一開始就用自動駕駛）, onDone(result) }
-// result = { place, time, integrity, prize }
+// result = { place, time, integrity, won（贏過的壽司 id）, prizes（拿到的壽司 id）, beatShumaha（對戰時有沒有贏修馬哈）}
 import { h } from '../../ui/dom.js';
 import { t } from '../../data/strings.js';
 import { RACE as R } from '../../data/balance.js';
 import { createStepper } from '../../core/loop.js';
-import { createRace, stepRace, playerCar, placeOf } from './physics.js';
-import { autopilotInput, prizeForPlace } from './ai.js';
+import { createRace, stepRace, playerCar, placeOf, wonSushi } from './physics.js';
+import { autopilotInput, prizesFor } from './ai.js';
 import { drawRace } from './render.js';
 
 const COUNTDOWN_MS = 3000;
@@ -40,7 +40,7 @@ export function createRaceScene(app, opts = {}) {
   const root = h('div', { class: 'scene race-scene' },
     h('div', { class: 'race-hud solid' },
       el.lap = h('span', null, ''), el.place = h('span', { class: 'race-place' }, ''),
-      el.speed = h('span', null, ''), el.boost = h('span', null, ''), el.integ = h('span', null, ''),
+      el.won = h('span', { dataset: { id: 'race-won' } }, ''), el.speed = h('span', null, ''), el.boost = h('span', null, ''), el.integ = h('span', null, ''),
       h('button', { class: 'btn plain mini', dataset: { id: 'race-auto' }, onclick: () => { auto = !auto; } }, t('race.auto')),
       h('button', { class: 'btn plain mini', dataset: { id: 'race-exit' }, onclick: exit }, t('race.exit'))),
     el.center = h('div', { class: 'race-center' }, ''),
@@ -66,15 +66,17 @@ export function createRaceScene(app, opts = {}) {
   function finish() {
     finished = true;
     const place = p.place || placeOf(race, p);
-    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), prize: prizeForPlace(place) };
-    app.sfx(place <= 3 ? 'win' : 'lose');
+    const won = wonSushi(race);
+    const sh = race.cars.find((c) => c.kind === 'shumaha');
+    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), won, prizes: prizesFor(won), beatShumaha: sh ? sh.place > place : null };
+    app.sfx(won.length ? 'win' : 'lose');
     el.result.classList.remove('hidden');
     el.result.replaceChildren(
       h('h1', { class: 'menu-title' }, t('race.finish')),
       h('div', { class: 'res-line big' }, h('span', null, t('race.result.place')), h('span', { dataset: { id: 'race-place' } }, t('race.place', { n: place }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.time')), h('span', null, t('race.seconds', { n: result.time.toFixed(1) }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.integrity')), h('span', null, `${result.integrity}%`)),
-      h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', null, t(`race.prize.${result.prize}`))),
+      h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', { dataset: { id: 'race-prize' } }, (won.length ? '' : t('race.consolation')) + result.prizes.map((id) => t(`sushi.${id}`)).join('、'))),
       h('div', { class: 'menu-foot' },
         opts.onDone ? null : h('button', { class: 'btn plain', dataset: { id: 'race-again' }, onclick: () => app.scenes.replace(createRaceScene(app, opts)) }, t('race.again')),
         h('button', { class: 'btn red', dataset: { id: 'race-done' }, onclick: () => { app.scenes.pop(); if (opts.onDone) opts.onDone(result); } }, t('common.ok'))));
@@ -86,6 +88,8 @@ export function createRaceScene(app, opts = {}) {
     el.place.textContent = t('race.place', { n: placeOf(race, p) });
     el.speed.textContent = `${t('race.speed')} ${Math.round((p.speed / R.MAX_SPEED) * 120)}`;
     el.boost.textContent = `${t('race.boost')} ${'●'.repeat(p.boosts)}${'○'.repeat(R.BOOSTS - p.boosts)}`;
+    // TODO(Opus)：改成壽司圖示。贏過的點亮，被追回去的變暗（見計劃書 9.2、階段 5 的清單）
+    el.won.textContent = `${t('race.won')} ${wonSushi(race).length}/${race.cars.filter((c) => c.kind === 'shop').length}`;
     el.integ.textContent = `${t('race.integrity')} ${Math.round(p.integrity)}%`;
   }
 
@@ -134,7 +138,7 @@ export function createRaceScene(app, opts = {}) {
       return true;
     },
     debug: {
-      mini: () => ({ kind: 'race', track: race.track, t: race.t, lap: p.lap, laps: race.laps, place: placeOf(race, p), speed: p.speed, boosts: p.boosts, integrity: p.integrity, over: race.over, result: scene.result, renderMs: renderN ? renderMs / renderN : 0 }),
+      mini: () => ({ kind: 'race', track: race.track, t: race.t, lap: p.lap, laps: race.laps, place: placeOf(race, p), won: wonSushi(race), speed: p.speed, boosts: p.boosts, integrity: p.integrity, over: race.over, result: scene.result, renderMs: renderN ? renderMs / renderN : 0 }),
       state: () => JSON.parse(JSON.stringify(race)),
       auto: (on) => { auto = on !== false; return auto; },
       step: (n = 1) => { countdown = 0; el.center.textContent = ''; for (let i = 0; i < n && !race.over; i++) stepRace(race, readInput()); return race.t; },

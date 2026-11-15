@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RACE as R } from '../../src/data/balance.js';
 import { TRACKS, TRACK_ORDER, buildSegments } from '../../src/data/tracks.js';
-import { createRace, stepRace, playerCar, placeOf, trackLength, standings } from '../../src/mini/race/physics.js';
-import { runAutopilot, aiPlace, aiSkill, prizeForPlace } from '../../src/mini/race/ai.js';
+import { createRace, stepRace, playerCar, placeOf, trackLength, standings, rivalRatio, wonSushi } from '../../src/mini/race/physics.js';
+import { runAutopilot, aiWon, aiSkill, prizesFor, prizeValue } from '../../src/mini/race/ai.js';
 import { rngCreate } from '../../src/core/rng.js';
+import { SUSHI } from '../../src/data/sushi.js';
 
 test('賽道：至少 3 條，頭尾高度相接，資料完整', () => {
   assert.ok(TRACK_ORDER.length >= 3);
@@ -77,14 +78,25 @@ test('賽車物理：決定性', () => {
   assert.equal(JSON.stringify(a.race), JSON.stringify(b.race));
 });
 
-test('驗收 9.8-1：自動駕駛比壽司車快 0.03 以上必贏，慢 0.03 以上必輸（3 條賽道、5 個等級）', () => {
+test('驗收 9.8-1：自動駕駛比某台壽司車快 0.03 以上必贏過它，慢 0.03 以上必輸給它（3 條賽道、5 個難度）', () => {
+  const N = R.LINEUP.length;
   for (const track of TRACK_ORDER) {
     for (let level = 1; level <= 5; level++) {
-      const r = R.SHOP_RATIO[level - 1];
-      const fast = runAutopilot({ track, level, f: r + 0.03 });
-      assert.equal(fast.place, 1, `${track} 等級 ${level}：f = ${(r + 0.03).toFixed(2)} 應該第 1 名，結果第 ${fast.place} 名`);
-      const slow = runAutopilot({ track, level, f: r - 0.03 });
-      assert.equal(slow.place, R.CARS, `${track} 等級 ${level}：f = ${(r - 0.03).toFixed(2)} 應該最後一名，結果第 ${slow.place} 名`);
+      // f 取在每台壽司車上方 0.03，再加一個比最慢那台還慢 0.03 的
+      const fs = [rivalRatio(level, 0) - 0.03];
+      // 玩家的最高速度比例是 1.0。超過 1.0 的 f 不測
+      for (let i = 0; i < N; i++) if (rivalRatio(level, i) + 0.03 <= 1 + 1e-9) fs.push(rivalRatio(level, i) + 0.03);
+      for (const f of fs) {
+        const r = runAutopilot({ track, level, f });
+        for (let i = 0; i < N; i++) {
+          const ratio = rivalRatio(level, i);
+          const got = r.won.includes(R.LINEUP[i]);
+          const tag = `${track} 難度 ${level}，f = ${f.toFixed(2)}，${R.LINEUP[i]}（${ratio.toFixed(2)}）`;
+          if (f >= ratio + 0.03 - 1e-9) assert.equal(got, true, `${tag} 應該贏過`);
+          if (f <= ratio - 0.03 + 1e-9) assert.equal(got, false, `${tag} 應該輸`);
+        }
+        assert.equal(r.place, N + 1 - r.won.length);
+      }
     }
   }
 });
@@ -107,29 +119,73 @@ test('修馬哈：最高速度比例 1.0，會用噴射，固定速度 0.98 的�
   }
 });
 
-test('AI 顧客的名次公式（計劃書 9.6）', () => {
-  const rng = rngCreate(9);
-  const dist = (type, level) => {
-    const c = [0, 0, 0, 0, 0];
-    for (let i = 0; i < 4000; i++) c[aiPlace(aiSkill(type, rng), level, rng)]++;
-    return c.map((x) => x / 4000);
-  };
-  // 修馬哈幾乎每場第 1 名
-  assert.ok(dist('shumaha', 3)[1] > 0.99);
-  assert.ok(dist('shumaha', 5)[1] > 0.8);
-  // 等級越高，顧客越難贏
-  const n1 = dist('normal', 1);
-  const n5 = dist('normal', 5);
-  assert.ok(n1[1] > 0.3 && n5[1] < 0.01, `一般客等級 1 第 1 名 ${n1[1]}、等級 5 ${n5[1]}`);
-  assert.ok(dist('raceFan', 3)[1] > dist('normal', 3)[1]);
-  assert.equal(prizeForPlace(1), 'set_tokujo');
-  assert.equal(prizeForPlace(2), 'set_jo');
-  assert.equal(prizeForPlace(3), 'set_nami');
-  assert.equal(prizeForPlace(4), 'tier1');
-  // 名次和排名函式
+test('對手陣容：越貴的壽司越快，玩家是小黃瓜捲，起跑排最後', () => {
   const race = createRace({ track: 'itamae', level: 2 });
-  assert.equal(race.cars.length, 6);
-  assert.equal(placeOf(race, playerCar(race)), 6);
-  assert.equal(standings(race)[0].id, 5);
+  assert.equal(race.cars.length, R.LINEUP.length + 1);
+  const p = playerCar(race);
+  assert.equal(p.sushi, 'kappa');
+  assert.equal(placeOf(race, p), race.cars.length);
+  assert.equal(standings(race)[0].sushi, 'otoro');
+  assert.deepEqual(wonSushi(race), []);
+  const rivals = race.cars.filter((c) => c.kind === 'shop');
+  assert.deepEqual(rivals.map((c) => c.sushi), R.LINEUP);
+  for (let i = 1; i < rivals.length; i++) {
+    assert.ok(rivals[i].ratio > rivals[i - 1].ratio);
+    assert.ok(SUSHI[rivals[i].sushi].ref > SUSHI[rivals[i - 1].sushi].ref, '越快的越貴');
+  }
+  assert.ok(Math.abs(rivals.at(-1).ratio - R.TOP_RATIO[1]) < 1e-9);
   assert.ok(trackLength(TRACKS.itamae) > 0);
+  // 比賽中：超過哪一台就暫時贏到哪一款，被追回去就消失
+  p.z = rivals[1].z + 10;
+  assert.deepEqual(wonSushi(race), ['tamago', 'sake']);
+  p.z = rivals[0].z - 10;
+  assert.deepEqual(wonSushi(race), []);
+  // 獎品：贏過的每款一貫；都沒贏過就是自己的小黃瓜捲
+  assert.deepEqual(prizesFor([]), ['kappa']);
+  assert.deepEqual(prizesFor(['tamago', 'sake']), ['tamago', 'sake']);
+  assert.equal(prizeValue(['tamago', 'sake']), 320);
+  // 對戰修馬哈：最快那台換成他，他的車不算獎品
+  const duel = createRace({ track: 'itamae', level: 3, shumaha: true });
+  assert.equal(duel.cars.filter((c) => c.kind === 'shop').length, R.LINEUP.length - 1);
+  playerCar(duel).z = 99999;
+  assert.equal(wonSushi(duel).length, R.LINEUP.length - 1);
+});
+
+/** 抽樣算 AI 顧客的回饋率（獎品價值 ÷ 入場費）。 */
+function payoutRate(type, level, n = 6000) {
+  const rng = rngCreate(9);
+  let sum = 0;
+  let all = 0;
+  for (let i = 0; i < n; i++) {
+    const won = aiWon(aiSkill(type, rng), level, rng);
+    sum += prizeValue(prizesFor(won));
+    if (won.length === R.LINEUP.length) all++;
+  }
+  return { rate: sum / n / R.FEE, all: all / n };
+}
+
+test('AI 顧客的公式和回饋率表（計劃書 9.6）', () => {
+  // 入場費 ¥800 時的回饋率範圍。[下限, 上限]
+  const TABLE = {
+    normal:  [[1.10, 1.35], [0.82, 1.02], [0.57, 0.73], [0.40, 0.52], [0.27, 0.37]],
+    raceFan: [[1.55, 1.90], [1.27, 1.55], [0.95, 1.17], [0.66, 0.82], [0.45, 0.57]],
+  };
+  for (const type of Object.keys(TABLE)) {
+    let prev = Infinity;
+    TABLE[type].forEach(([lo, hi], i) => {
+      const { rate } = payoutRate(type, i + 1);
+      assert.ok(rate >= lo && rate <= hi, `${type} 難度 ${i + 1} 回饋率 ${rate.toFixed(3)}，範圍 ${lo}–${hi}`);
+      assert.ok(rate < prev, '難度越高，回饋率越低');
+      prev = rate;
+    });
+  }
+  // 修馬哈：幾乎每場全拿
+  assert.ok(payoutRate('shumaha', 3).all > 0.99);
+  assert.ok(payoutRate('shumaha', 5).all > 0.9);
+  // 贏到的一定是從最慢的開始連續的幾款
+  const rng = rngCreate(3);
+  for (let i = 0; i < 200; i++) {
+    const won = aiWon(aiSkill('normal', rng), 3, rng);
+    assert.deepEqual(won, R.LINEUP.slice(0, won.length));
+  }
 });
