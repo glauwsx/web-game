@@ -298,7 +298,11 @@ function stepOne(state, layout, c) {
         for (const m of partyOf(state, c)) m.sat += B.SAT_QUEUE_PER_MIN;
       }
       if (c.patience <= 0) {
-        for (const m of partyOf(state, c)) startLeaving(state, layout, m, true);
+        // 整組一起走。評價只扣一次（算在組長身上）。
+        for (const m of partyOf(state, c)) {
+          startLeaving(state, layout, m, m === c);
+          if (m !== c) setThought(state, m, 'angry');
+        }
         pushFeed(state, 'feed.queueLeft', null);
       }
       return;

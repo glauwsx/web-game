@@ -1,5 +1,6 @@
 // 標題畫面、主選單、佔位場景。
-import { h } from './dom.js';
+import { h, toast } from './dom.js';
+import { SAVE_KEYS } from '../core/save.js';
 import { t } from '../data/strings.js';
 
 /** 標題和選單共用的背景：黃昏的壽司店門口。用色塊畫，之後的階段會換成像素圖。 */
@@ -160,7 +161,7 @@ export function createMainMenuScene(app) {
     name: 'menu',
     title: `${t('title.name')}　${t('title.sub')}`,
     items: [
-      { id: 'owner', label: t('menu.owner'), desc: t('menu.owner.desc'), cls: 'red', action: () => app.scenes.replace(createOwnerMenuScene(app)) },
+      { id: 'owner', label: t('menu.owner'), desc: t('menu.owner.desc'), cls: 'red', action: () => app.go('owner') },
       { id: 'customer', label: t('menu.customer'), desc: t('menu.customer.desc'), cls: 'indigo', action: () => app.go('customer') },
       { id: 'settings', label: t('menu.settings'), cls: 'plain', action: () => app.go('settings') },
     ],
@@ -175,7 +176,7 @@ export function createOwnerMenuScene(app) {
       { id: 'levels', label: t('owner.levels'), desc: t('owner.levels.desc'), cls: 'red', action: () => app.go('levels') },
       { id: 'endless', label: t('owner.endless'), desc: t('owner.endless.desc'), cls: 'indigo', action: () => app.go('endless') },
     ],
-    back: () => app.scenes.replace(createMainMenuScene(app)),
+    back: () => app.go('menu'),
   });
 }
 
@@ -188,4 +189,74 @@ export function createPlaceholderScene(app, label) {
     items: [],
     back: () => app.scenes.reset(createMainMenuScene(app)),
   });
+}
+
+/**
+ * 蓋在目前畫面上的選單（暫停選單、確認框）。下層畫面照樣顯示，但不更新。
+ * items: [{ id, label, cls, action }]。onEscape：按 Esc 時要做的事。
+ */
+export function createOverlayMenu(app, { name, title, body, items, onEscape }) {
+  const root = h('div', { class: 'scene menu-scene overlay-scene' },
+    h('div', { class: 'dlg-shade solid' }),
+    h('div', { class: 'panel menu-panel solid' },
+      h('h1', { class: 'menu-title' }, title),
+      body ? h('div', { class: 'menu-body' }, body) : null,
+      h('div', { class: 'menu-list' },
+        items.map((it) => h('button', {
+          class: `btn menu-item ${it.cls || 'plain'}`, dataset: { id: it.id },
+          onclick: () => { app.sfx('button'); it.action(); },
+        }, it.label)))));
+  return {
+    name,
+    overlay: true,
+    root,
+    input(evt) {
+      if (evt.type === 'keydown' && evt.code === 'Escape' && onEscape) onEscape();
+      return true;
+    },
+  };
+}
+
+/** 設定畫面。 */
+export function createSettingsScene(app) {
+  const s = app.settings;
+  const save = () => { app.saveSettings(); app.audio.applyVolumes(); };
+  const slider = (key, label) => h('label', { class: 'set-row' },
+    h('span', null, label),
+    h('input', { type: 'range', min: 0, max: 100, value: Math.round((s[key] ?? 0.5) * 100), dataset: { id: `set-${key}` },
+      oninput: (e) => { s[key] = Number(e.target.value) / 100; save(); if (key === 'sfx') app.sfx('button'); } }));
+  const autoBtn = h('button', { class: 'btn plain', dataset: { id: 'set-auto' }, onclick: () => { s.autoAccel = !s.autoAccel; autoBtn.textContent = t(s.autoAccel ? 'settings.on' : 'settings.off'); save(); } }, t(s.autoAccel ? 'settings.on' : 'settings.off'));
+  const confirmReset = (key, id) => h('button', {
+    class: 'btn plain', dataset: { id },
+    onclick: () => {
+      app.scenes.push(createOverlayMenu(app, {
+        name: 'confirm', title: t('settings.confirm'),
+        items: [
+          { id: 'yes', label: t('common.ok'), cls: 'red', action: () => { app.store.remove(key); app.scenes.pop(); toast(t('settings.done'), 1800); } },
+          { id: 'no', label: t('common.cancel'), action: () => app.scenes.pop() },
+        ],
+        onEscape: () => app.scenes.pop(),
+      }));
+    },
+  }, t(id === 'reset-levels' ? 'settings.resetLevels' : 'settings.resetEndless'));
+  const extra = h('div', { class: 'set-extra' });
+  if (app.settingsExtra) for (const fn of app.settingsExtra) extra.appendChild(fn(app));
+  const back = () => app.scenes.pop();
+  const root = h('div', { class: 'scene menu-scene' },
+    h('div', { class: 'panel menu-panel settings-panel solid' },
+      h('h1', { class: 'menu-title' }, t('settings.title')),
+      slider('music', t('settings.music')),
+      slider('sfx', t('settings.sfx')),
+      h('div', { class: 'set-row' }, h('span', null, t('settings.autoAccel')), autoBtn),
+      h('div', { class: 'set-btns' }, confirmReset(SAVE_KEYS.levels, 'reset-levels'), confirmReset(SAVE_KEYS.endless, 'reset-endless')),
+      extra,
+      h('div', { class: 'menu-foot' }, h('button', { class: 'btn plain', dataset: { id: 'back' }, onclick: () => { app.sfx('button'); back(); } }, t('menu.back')))));
+  let time = 0;
+  return {
+    name: 'settings',
+    root,
+    update(dt) { time += dt; },
+    render(ctx) { drawBackdrop(ctx, app.W, app.H, time); dim(ctx, app.W, app.H, 0.55); },
+    input(evt) { if (evt.type === 'keydown' && evt.code === 'Escape') { back(); return true; } return false; },
+  };
 }

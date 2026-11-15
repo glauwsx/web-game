@@ -100,12 +100,17 @@ test('economy：結帳、小費、評價、真工夫量表', () => {
   assert.ok(Math.abs(s.reputation - (rep - 0.2)) < 1e-9);
   // 生氣離開：付已經吃的，評價固定下降
   const c3 = createCustomer(s, 'normal');
-  c3.bill = 300; c3.eaten = 1;
+  c3.bill = 300; c3.eaten = 1; c3.furn = s.shop.furniture[1].id;
   const rep3 = s.reputation;
   settleCustomer(s, c3, true);
   assert.equal(s.day.sales, 3300);
   assert.ok(Math.abs(s.reputation - (rep3 - 0.5)) < 1e-9);
   assert.equal(s.day.angry, 1);
+  // 排隊排到生氣離開：評價下降比較少
+  const c4 = createCustomer(s, 'normal');
+  const rep4 = s.reputation;
+  settleCustomer(s, c4, true);
+  assert.ok(Math.abs(s.reputation - (rep4 - 0.2)) < 1e-9);
 });
 
 test('economy：點餐扣庫存，取消時退回', () => {

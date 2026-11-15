@@ -12,6 +12,7 @@ import {
 import { spawnArrivals, stepCustomers, seatQueue, closeOutCustomers } from './customers.js';
 import { stepStaff, setRole, placeStaff, freeStation, findStaff, kufuActive } from './staff.js';
 import { createRival, rivalRevenue } from './rival.js';
+import { scheduleEvents, fireEvents, stepBosses, setDisguise } from './bosses.js';
 
 export const STATE_VERSION = 1;
 
@@ -20,7 +21,7 @@ function newDay() {
     revenue: 0, sales: 0, fees: 0, tips: 0, bonus: 0, penalties: 0,
     purchases: 0, wages: 0, prizeCost: 0,
     groups: 0, people: 0, served: 0, angry: 0, lost: 0, happy: 0,
-    pieces: 0, wrong: 0, soldOut: 0, sold: {},
+    pieces: 0, wrong: 0, soldOut: 0, caught: 0, sold: {},
   };
 }
 
@@ -83,7 +84,8 @@ export function createShopState(cfg) {
     day: newDay(),
     exposedCount: 0,
     feed: [],
-    events: JSON.parse(JSON.stringify(cfg.events || [])),
+    events: [],
+    banner: null,
     flags: {},
     result: null,
   };
@@ -104,6 +106,7 @@ export function createShopState(cfg) {
   }
   for (const s of cfg.staff) setRole(state, s.id, s.role || 'off');
   if (state.goal.kind === 'rival') state.rival = createRival(state.goal.target, state.rng, state.openMin, state.closeMin);
+  state.events = scheduleEvents(cfg.events, state.rng);
   return state;
 }
 
@@ -144,9 +147,11 @@ export function stepShop(state) {
   if (state.tick % B.TICKS_PER_MIN === 0) {
     processDeliveries(state);
     spawnArrivals(state);
+    fireEvents(state);
   }
   stepCustomers(state);
   stepStaff(state);
+  stepBosses(state);
   seatQueue(state);
   state.tick++;
   if (state.tick >= dayTicks(state)) closeShop(state);
@@ -212,6 +217,7 @@ const fail = (reason) => ({ ok: false, reason });
  *   { type: 'kufu' }
  *   { type: 'setUniform', on }
  *   { type: 'sellPremium', item, qty }
+ *   { type: 'disguise', on }
  */
 export function applyAction(state, action) {
   if (!action || typeof action !== 'object') return fail('bad');
@@ -282,6 +288,10 @@ export const ACTIONS = {
     if (!state.shop.furniture.some((f) => f.type === 'uniformSign')) return fail('noSign');
     state.uniform = !!a.on;
     return { ok: true };
+  },
+  disguise(state, a) {
+    if (state.phase === 'closed') return fail('closed');
+    return setDisguise(state, a.on);
   },
   sellPremium(state, a) {
     if (!state.features.sellPremium) return fail('locked');

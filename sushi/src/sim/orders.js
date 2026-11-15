@@ -67,7 +67,7 @@ export function availableFloorStaff(state) {
   const ok = (s) => s.role === 'floor' && s.ready && !s.gone;
   const loading = state.staff.find((s) => ok(s) && s.task && s.task.kind === 'carry' && !s.task.picked && s.task.orders.length < B.TRAY_SIZE);
   if (loading) return loading;
-  return state.staff.find((s) => ok(s) && !s.task && !s.path.length) || null;
+  return state.staff.find((s) => ok(s) && !s.task && (!s.path.length || (s.walk && s.walk.kind === 'home'))) || null;
 }
 
 /** 外場員工還接得下新的訂單嗎？（有人在班，而且待送的量沒有超過上限） */

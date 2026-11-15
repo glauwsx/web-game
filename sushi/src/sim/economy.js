@@ -232,7 +232,7 @@ export function settleCustomer(state, c, angry) {
   if (c.fees > 0) addRevenue(state, c.fees, 'fees');
   c.sat = clamp(c.sat, 0, 100);
   if (angry) {
-    addReputation(state, B.REP_ANGRY_LEAVE);
+    addReputation(state, c.furn ? B.REP_ANGRY_LEAVE : B.REP_QUEUE_LEAVE);
     state.day.angry++;
     return;
   }

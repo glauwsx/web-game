@@ -5,8 +5,13 @@ import { createInput } from './core/input.js';
 import { createSaveStore, probeLocalStorage } from './core/save.js';
 import { t } from './data/strings.js';
 import { toast } from './ui/dom.js';
-import { createTitleScene, createMainMenuScene, createPlaceholderScene } from './ui/menus.js';
+import {
+  createTitleScene, createMainMenuScene, createOwnerMenuScene, createPlaceholderScene, createSettingsScene, createOverlayMenu,
+} from './ui/menus.js';
 import { createDemoScene } from './modes/demo.js';
+import { createAudio } from './core/audio.js';
+import { SAVE_KEYS } from './core/save.js';
+import { createLevelSelectScene, startLevel } from './modes/owner-level.js';
 
 const W = 480;
 const H = 270;
@@ -27,6 +32,10 @@ const params = {
   seed: query.has('seed') ? Number(query.get('seed')) >>> 0 : null,
   scene: query.get('scene') || '',
   speed: debug && query.has('speed') ? Math.max(1, Number(query.get('speed')) || 1) : 1,
+  // 只在 debug 下有效的測試用參數
+  noIntro: debug && query.get('nointro') === '1',
+  noHints: debug && query.get('nohints') === '1',
+  unlockAll: debug && query.get('unlock') === '1',
 };
 
 // ---- 畫布縮放 ----
@@ -62,27 +71,72 @@ const scenes = createSceneManager({
 
 const store = createSaveStore(probeLocalStorage());
 
+const SETTINGS_SPEC = {
+  version: 1,
+  defaults: () => ({ version: 1, music: 0.5, sfx: 0.7, autoAccel: false }),
+};
+const corruptReported = {};
+
 const app = {
   W, H, canvas, ctx, scenes, store, params,
   stageScale: 1,
   input: null,
-  /** 播音效。音訊系統在之後的階段接上。 */
-  sfx() {},
-  /** 場景工廠表。之後的階段把真正的場景註冊進來。 */
+  settings: SETTINGS_SPEC.defaults(),
+  audio: null,
+  /** 播音效。 */
+  sfx(name, gap) { if (app.audio) app.audio.sfx(name, gap); },
+  saveSettings() { store.save(SAVE_KEYS.settings, app.settings); },
+  /** 讀到壞掉的存檔：提示玩家，讓玩家選擇要不要重設。每份存檔只問一次。 */
+  reportCorrupt(name) {
+    if (corruptReported[name]) return;
+    corruptReported[name] = true;
+    scenes.push(createOverlayMenu(app, {
+      name: 'corrupt',
+      title: t('save.corrupt', { name: t(`save.name.${name}`) }),
+      items: [
+        { id: 'corrupt-reset', label: t('save.corrupt.reset'), cls: 'red', action: () => { store.remove(SAVE_KEYS[name]); scenes.pop(); } },
+        { id: 'corrupt-keep', label: t('save.corrupt.keep'), action: () => scenes.pop() },
+      ],
+      onEscape: () => scenes.pop(),
+    }));
+  },
+  /** 路由表：名稱 → 函式 (app, 參數)。函式自己切換場景；回傳場景物件的話會被疊上去。 */
   routes: {},
   /** 依名稱前往場景。名稱可以帶參數，例如 'level:3'。 */
   go(name) {
     const [key, arg] = String(name).split(':');
-    const make = app.routes[key];
-    if (make) {
-      const sc = make(app, arg);
-      if (sc) { scenes.push(sc); return sc; }
+    const route = app.routes[key];
+    if (route) {
+      const r = route(app, arg);
+      if (r && r.name) scenes.push(r);
+      if (r) return r;
     }
     return scenes.push(createPlaceholderScene(app, name));
   },
 };
 
+{
+  const r = store.load(SAVE_KEYS.settings, SETTINGS_SPEC);
+  app.settings = { ...SETTINGS_SPEC.defaults(), ...r.data };
+  if (r.status === 'corrupt') store.remove(SAVE_KEYS.settings);
+}
+app.audio = createAudio(() => app.settings);
+// 瀏覽器要求使用者互動後才能出聲
+const wake = () => app.audio.resume();
+window.addEventListener('pointerdown', wake);
+window.addEventListener('keydown', wake);
+document.addEventListener('visibilitychange', () => { if (document.hidden) app.audio.suspend(); else app.audio.resume(); });
+
 app.routes.demo = (a) => createDemoScene(a);
+// 自己切換場景的路由回傳 true；回傳場景物件的路由會被 go() 疊到最上層。
+app.routes.menu = (a) => { scenes.reset(createMainMenuScene(a)); return true; };
+app.routes.owner = (a) => { scenes.reset(createOwnerMenuScene(a)); return true; };
+app.routes.settings = (a) => createSettingsScene(a);
+app.routes.levels = (a) => { scenes.reset(createLevelSelectScene(a)); return true; };
+app.routes.level = (a, arg) => {
+  scenes.reset(createLevelSelectScene(a));
+  return startLevel(a, Number(arg) || 1) ? true : null;
+};
 
 app.input = createInput(canvas, W, H, (evt) => scenes.input(evt));
 

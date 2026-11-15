@@ -16,7 +16,7 @@ export const REP_FACTOR_MIN = 0.4;
 export const REP_FACTOR_MAX = 2.0;
 export const UNIFORM_ARRIVAL_MULT = 1.4;   // 均一價招牌的來客倍率
 export const UNIFORM_PRICE = 300;
-export const QUEUE_MAX = 8;                // 排隊上限（組）
+export const QUEUE_MAX = 5;                // 排隊上限（組）
 export const LUNCH_HOURS = [11, 12, 13];
 export const LUNCH_SALARYMAN_MULT = 2.5;   // 午餐時段上班族的比例倍率
 export const PARTY_SPAWN_GAP = 6;          // 同一組的成員間隔幾個 tick 出現
@@ -24,7 +24,7 @@ export const PARTY_SPAWN_GAP = 6;          // 同一組的成員間隔幾個 tic
 // ---- 顧客行為 ----
 export const CUSTOMER_SPEED = 0.15;        // 每 tick 走幾格
 export const DECIDE_TICKS = 4;             // 看菜單的時間
-export const EAT_MIN = 1.5;                // 吃一貫的時間（分）
+export const EAT_MIN = 3;                  // 吃一貫的時間（分）
 export const ORDER_THRESHOLD = 0;          // 效用低於這個值就不點
 export const ORDER_NOISE = 0.12;           // 點餐效用的隨機擾動
 export const PREF_MIN = 0.6;
@@ -53,7 +53,8 @@ export const SAT_EXPOSED = -40;
 export const REP_EXPOSED = -3;
 export const REP_LEAVE_BASE = 60;          // 評價變化 = (滿意度 − 60) / 200
 export const REP_LEAVE_DIV = 200;
-export const REP_ANGRY_LEAVE = -0.5;       // 等到生氣離開
+export const REP_ANGRY_LEAVE = -0.5;       // 等餐等到生氣離開
+export const REP_QUEUE_LEAVE = -0.2;       // 排隊排到生氣離開
 export const REP_COUPON = -1;              // 獎品發不出來，只能給招待券
 export const TIP_SAT = 85;
 export const TIP_RATE = 0.05;
@@ -94,3 +95,9 @@ export const RIVAL_NOISE = 0.03;
 // ---- 機台的吸引力 ----
 export const PACHINKO_ATTRACTION = 0.04;
 export const RACE_ATTRACTION = 0.12;
+
+// ---- 部長 ----
+export const BUCHO_NOTICE_MIN = 5;         // 沒變裝幾分鐘後被認出來
+export const BUCHO_FINE = 10000;
+export const BUCHO_DRAG_MIN = 60;          // 阿兩被拖走幾分鐘
+export const BANNER_MIN = 6;               // 警告橫幅顯示幾遊戲分鐘

@@ -158,15 +158,25 @@ function customerAccess(state, layout, c) {
   return layout.access[`${c.furn}:${c.slot}`];
 }
 
-/** 外場員工到板前檯拿餐的位置：板前檯旁邊走得到的格子。 */
-function pickupCell(layout, station) {
+/**
+ * 外場員工到板前檯拿餐的位置：板前檯旁邊走得到的格子。
+ * 有好幾格可以選時，選「走到板前檯再走到顧客」總路程最短的那一格。
+ */
+function pickupCell(layout, station, from, target) {
+  let best = null;
+  let bestLen = Infinity;
   for (const [dx, dy] of [[0, 1], [1, 1], [-1, 0], [2, 0], [0, -1], [1, -1]]) {
     const x = station.x + dx;
     const y = station.y + dy;
     if (x < 0 || y < 0 || x >= layout.w || y >= layout.h) continue;
-    if (layout.dist[y * layout.w + x] >= 0) return [x, y];
+    if (layout.dist[y * layout.w + x] < 0) continue;
+    const p1 = pathBetween(layout, from, [x, y]);
+    const p2 = target ? pathBetween(layout, [x, y], target) : [];
+    if (!p1 || !p2) continue;
+    const len = p1.length + p2.length;
+    if (len < bestLen) { bestLen = len; best = [x, y]; }
   }
-  return null;
+  return best;
 }
 
 /** 師傅做好一貫之後，決定怎麼送。 */
@@ -184,12 +194,15 @@ function giveToFloor(state, f, order, layout) {
     f.task.orders.push(order.id);
   } else {
     const station = findFurniture(state, order.station);
-    const pickup = station && pickupCell(layout, station);
+    const c = findCustomer(state, order.cid);
     const from = cellOf(f.gx, f.gy, layout);
+    const pickup = station && pickupCell(layout, station, from, c ? customerAccess(state, layout, c) : null);
     const p = pickup ? pathBetween(layout, from, pickup) : [];
     if (!p) return false;
     f.path = p.length ? p : [[f.gx, f.gy]];
+    f.walk = null;
     f.task = { kind: 'carry', orders: [order.id], picked: false };
+    f.home = pickup; // 送完之後回到這裡待命
   }
   order.st = 'carrying';
   order.carrier = f.id;
@@ -292,13 +305,20 @@ function stepFloor(state, s, layout) {
       return;
     }
     s.task = null;
-    return;
   }
   // 撿放在檯面上等人送的訂單，一趟最多拿 TRAY_SIZE 貫
   for (const o of state.orders) {
     if (o.st !== 'ready' || !o.orphan) continue;
     if (s.task && s.task.orders.length >= B.TRAY_SIZE) break;
     giveToFloor(state, s, o, layout);
+  }
+  // 沒事做：走回板前檯旁邊待命，下一趟才不用從遠處走過來
+  if (!s.task && !s.path.length && s.home) {
+    const here = cellOf(s.gx, s.gy, layout);
+    if (here[0] !== s.home[0] || here[1] !== s.home[1]) {
+      const p = pathBetween(layout, here, s.home);
+      if (p && p.length) { s.path = p; s.walk = { kind: 'home' }; }
+    }
   }
 }
 

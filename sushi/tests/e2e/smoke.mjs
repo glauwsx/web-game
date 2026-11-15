@@ -24,9 +24,30 @@ await runE2E('smoke', async ({ open, check, shot }) => {
     check(await page.locator('button[data-id="levels"]').isVisible(), `${label}：店家選單有關卡模式`);
     await page.click('button[data-id="back"]');
     await waitScene(page, 'menu');
-    // 佔位場景和返回
+    // 關卡選擇
+    await page.click('button[data-id="owner"]');
+    await waitScene(page, 'owner-menu');
+    await page.click('button[data-id="levels"]');
+    await waitScene(page, 'levels');
+    check(await page.locator('button[data-level]').count() === 10, `${label}：關卡選擇列出 10 關`);
+    check(!(await page.locator('button[data-level="1"]').isDisabled()), `${label}：第 1 關可以玩`);
+    check(await page.locator('button[data-level="2"]').isDisabled(), `${label}：第 2 關還鎖著`);
+    const card = await page.locator('button[data-level="10"]').boundingBox();
+    check(card.y + card.height <= box.y + box.height + 1, `${label}：關卡選擇沒有超出舞台`);
+    await shot(page, `p3-levels-${label}.png`);
+    await page.keyboard.press('Escape');
+    await waitScene(page, 'owner-menu');
+    await page.click('button[data-id="back"]');
+    await waitScene(page, 'menu');
+    // 設定畫面和返回
     await page.click('button[data-id="settings"]');
-    await page.waitForFunction(() => window.__sushi.scenes().length >= 1 && window.__sushi.scene() !== 'menu');
+    await waitScene(page, 'settings');
+    check(await page.locator('input[data-id="set-sfx"]').isVisible(), `${label}：設定畫面有音量`);
+    await page.keyboard.press('Escape');
+    await waitScene(page, 'menu');
+    // 還沒做的功能進佔位場景，可以返回
+    await page.click('button[data-id="customer"]');
+    await page.waitForFunction(() => window.__sushi.scene().startsWith('placeholder'));
     await page.keyboard.press('Escape');
     await waitScene(page, 'menu');
     check(true, `${label}：子畫面可以返回主選單`);
