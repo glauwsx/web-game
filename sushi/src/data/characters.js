@@ -1,4 +1,4 @@
-// 角色：外觀參數（給紙娃娃產生器用）。員工數值和顧客類型數值在階段 2 加入。
+// 角色：外觀參數（給紙娃娃產生器用）、員工數值、顧客類型數值。
 // 外觀照原作設定：髮型、服裝顏色、特徵。圖像全部由程式產生。
 
 const RYO_FACE = { brow: 'uni', stubble: true };
@@ -125,4 +125,30 @@ export const CAST_NAME_KEYS = {
   nakagawa: 'char.nakagawa', reiko: 'char.reiko', bucho: 'char.bucho', honda: 'char.honda', honda_apron: 'char.honda',
   terai: 'char.terai', matoi: 'char.matoi', lemon: 'char.lemon', geparuto: 'char.geparuto', yuutsu: 'char.yuutsu',
   shumaha: 'char.shumaha', pro: 'char.pro',
+};
+
+// ---- 員工數值（範圍 1 到 10）----
+// speed：捏製速度。skill：技術。service：接待。walk：走路速度。lang：會外語。wage：日薪。
+// look：平常的外觀。floorLook：當外場時的外觀。
+export const STAFF = {
+  ryo:      { speed: 9, skill: 8, service: 4,  walk: 'normal', lang: false, wage: 0,     look: 'ryo', disguiseLook: 'ryo_disguise', player: true },
+  honda:    { speed: 4, skill: 2, service: 5,  walk: 'fast',   lang: false, wage: 5000,  look: 'honda_apron' },
+  terai:    { speed: 4, skill: 4, service: 5,  walk: 'slow',   lang: false, wage: 4000,  look: 'terai' },
+  matoi:    { speed: 7, skill: 7, service: 8,  walk: 'normal', lang: false, wage: 12000, look: 'matoi' },
+  reiko:    { speed: 3, skill: 4, service: 10, walk: 'normal', lang: true,  wage: 15000, look: 'reiko', floorAttraction: 0.15 },
+  nakagawa: { speed: 5, skill: 5, service: 9,  walk: 'normal', lang: true,  wage: 20000, look: 'nakagawa' },
+};
+export const STAFF_ORDER = ['ryo', 'honda', 'terai', 'matoi', 'reiko', 'nakagawa'];
+
+// ---- 顧客類型 ----
+// appetite：食量（貫）。budget：預算（¥）。sens：價格敏感度。patience：耐心（分）。
+// tierPref：對 T1 到 T4 的偏好倍率。party：一組幾個人。
+export const CUSTOMER_TYPES = {
+  normal:      { appetite: [4, 7], budget: [1500, 3000], sens: 1.0, patience: 12, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1 },
+  salaryman:   { appetite: [3, 5], budget: [1000, 1800], sens: 1.2, patience: 6,  tierPref: [1.1, 1.0, 0.8, 0.7], party: 1 },
+  family:      { appetite: [3, 5], budget: [1200, 2500], sens: 1.0, patience: 15, tierPref: [1.1, 1.0, 0.9, 0.8], party: 3, prefersTable: true },
+  tourist:     { appetite: [5, 9], budget: [3000, 6000], sens: 0.6, patience: 10, tierPref: [0.8, 1.0, 1.1, 1.1], party: 1, foreign: true },
+  gourmet:     { appetite: [5, 8], budget: [4000, 8000], sens: 0.4, patience: 10, tierPref: [0.5, 0.8, 1.25, 1.35], party: 1 },
+  pachinkoFan: { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'pachinko', plays: [1, 3] },
+  raceFan:     { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'race', plays: [1, 2] },
 };

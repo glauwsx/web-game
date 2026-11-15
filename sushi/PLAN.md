@@ -1221,6 +1221,15 @@ flowchart TD
   - 坐著的角色要自己給 `depth`（家具深度鍵 + 0.005）和 `z`，否則會被家具蓋住。見 `src/modes/demo.js`。
   - 開發時截圖：`node tools/shot.mjs "<網址參數>" <輸出檔> [寬] [高]`。展示場景是 `?scene=demo`。
 
+- 已定案的模擬設計（階段 2）：
+  - 狀態由 `createShopState(cfg)` 建立（`cfg` 的格式寫在 `src/sim/shop.js` 的註解）。每 tick 呼叫 `stepShop(state)`。操作一律走 `applyAction(state, action)`，新操作加到 `shop.js` 的 `ACTIONS` 表。
+  - 家具的使用位置（`slots`）、進出格（`access`）、保留格（`reserve`）定義在 `src/data/furniture.js`。板前檯的師傅站在後面一排（`y − 1`），所以板前檯不能貼著 `gy = 0` 的牆。
+  - 顧客狀態 `c.st`：`arrive`、`queue`、`toSeat`、`decide`、`wait`、`eat`、`leave`、`gone`。機台顧客（階段 4、5）預留了 `c.goal`、`c.plays`、`c.played`、`c.fees`、`c.prizes`。
+  - 送餐規則的實作細節（計劃書沒寫，自己決定的）：外場員工一趟最多拿 4 貫（`TRAY_SIZE`）。外場忙的時候，壽司先放檯面等他回來拿；每位外場待送超過 6 貫（`FLOOR_BACKLOG`）才由師傅自己送。
+  - 耐心是「單次等待」的上限：每次等餐、每次排隊都重新倒數。
+  - 打烊時還在店裡的顧客就地結帳。沒點餐就離開的顧客不影響評價。
+  - 跑一天看數字：`node tools/sim-day.mjs [種子]`（階段 3 有 `data/levels.js` 之後可以改成跑關卡）。
+
 ### 階段 0：骨架與基礎
 
 - [x] 建立目錄結構、`package.json`、`tests/serve.mjs`、`tests/pw.mjs`。
@@ -1245,11 +1254,11 @@ flowchart TD
 
 ### 階段 2：經營模擬核心（純邏輯）
 
-- [ ] `data/` 裡的 balance、sushi、characters、furniture。
-- [ ] `sim/` 裡的 shop、customers、staff、orders、economy、pathfind、rival。
-- [ ] `applyAction` 和所有操作的定義。
-- [ ] `sim/bots.js` 的 `naive`。
-- [ ] 單元測試 3 到 8。
+- [x] `data/` 裡的 balance、sushi、characters、furniture。
+- [x] `sim/` 裡的 shop、customers、staff、orders、economy、pathfind、rival。
+- [x] `applyAction` 和所有操作的定義。
+- [x] `sim/bots.js` 的 `naive`。
+- [x] 單元測試 3 到 8。
 
 驗收：在 Node.js 裡不開瀏覽器，能用種子跑完一個營業日，印出營業額、來客數、評價。決定性測試通過。
 
