@@ -1253,14 +1253,18 @@ flowchart TD
 
 **階段 5 剩下的工作**
 
-1. `mini/race/render.js`：偽 3D。標準做法：從鏡頭所在的路段往前取 150 到 200 段，累加 `curve` 得到水平偏移，用 `y` 做高度投影，由遠到近畫梯形。路肩和分隔線每 3 段換深淺色。對手車的位置是 `car.z`（這一圈的距離）、`car.lap`、`car.x`（−1 到 1 是路面）。路邊景物在 `x = ±SCENERY_X`。景物、車子的像素圖要自己用 `pixgrid.js` 畫，名稱用 `race.` 開頭，並加 `sprite.race.xxx` 字串。
-2. `mini/race/game.js`：每 1/60 秒呼叫 `stepRace(race, { steer, accel, brake, boost })`。`boost` 只在按下的那一步傳 `true`。`race.events` 有 `boost`、`pad`、`puddle`、`bump`、`crash`，拿來播音效。`race.over` 之後看 `playerCar(race).place` 和 `.integrity`。
-   - 設定裡的 `autoAccel`（已經存在 `app.settings`）：開啟時 `accel` 永遠是 `true`。
-   - 除錯用自動駕駛：`autopilotInput(race, playerCar(race), 1.0)`。端對端測試 `race.mjs` 用它跑完一場。
-   - 觸控：左下方左右鈕、右下方油門、煞車、噴射鈕。用 `app.input.setVirtual(code, down)`。
-   - 顧客版本的角色數值差異：`createRace({ stats: { accel, top, handling } })`，各在 0.95 到 1.05。
-3. 經營整合：`aiPlace(aiSkill(類型, rng), 壽司車等級, rng)` 算名次，`prizeForPlace` 換成獎品。賽道的欄位 `level`、`fee`、`track`、`race` 已經建好。一場最多 4 位顧客，第一位報名後等 1 分鐘開賽，佔用 4 分鐘。經營畫面上的小車用 `furnitureDraw.raceTrack` 畫。
-4. 修馬哈事件、第 6、7 關、單元測試 9 的修馬哈部分、端對端測試 `race.mjs`、效能檢查（9.8-3）。
+賽車小遊戲本身已經可以玩：`src/mini/race/render.js`（偽 3D）、`game.js`（場景）、`data/sprites/race.js`（車子和景物的像素圖）。`?scene=race:賽道id` 可以直接開。繪圖平均不到 1 毫秒（驗收 9.8-3 通過）。端對端測試 `race.mjs` 通過。
+
+`createRaceScene(app, opts)` 的 `opts`：`track`、`level`、`shumaha`、`stats`（角色數值）、`auto`、`onDone(result)`、`onExit()`。`result = { place, time, integrity, prize }`。有給 `onDone` 時，結果畫面只有「好」一個按鈕（給經營模式的試玩和應戰用）。
+
+還沒做的：
+
+1. 經營整合：`aiPlace(aiSkill(類型, rng), 壽司車等級, rng)` 算名次，`prizeForPlace` 換成獎品。賽道家具的欄位 `level`、`fee`、`track`、`race` 已經建好。一場最多 4 位顧客，第一位報名後等 1 分鐘開賽，佔用 4 分鐘。經營畫面上的小車用 `furnitureDraw.raceTrack` 畫。新操作 `setCarLevel`、`setFee`。設施分頁的區塊和試玩鈕。
+2. 修馬哈事件（`registerEvent('shumaha', ...)`）和三種對策。親自應戰用 `createRaceScene(app, { shumaha: true, onDone })`。
+3. 第 6、7 關的資料、對話、提示。
+4. 單元測試 9 的修馬哈事件部分。
+5. 可以改進但不是必要的：引擎聲（音高跟速度連動）、專用的音效（目前借用 `kufu`、`deny`、`angry`）、賽道選擇畫面（顧客版本會需要）、玩家車子轉彎時的傾斜畫格。
+6. 繪圖的注意事項：路面由遠到近畫，每段的上下邊對齊到整數像素並各多畫 1 像素。這是為了避免相鄰兩段之間出現細縫。改繪圖時不要拿掉。
 
 **階段 6 的注意事項（平衡）**
 
@@ -1381,11 +1385,11 @@ flowchart TD
 
 ### 階段 5：賽車，第 6、7 關
 
-- [ ] `mini/race/` 全部。3 條賽道。（已完成：`physics.js`、`ai.js`、3 條賽道的資料。還沒做：`game.js`、`render.js`）
+- [x] `mini/race/` 全部。3 條賽道。
 - [ ] 經營模擬整合：賽道設施、AI 顧客參賽、經營畫面上的小車、試玩。
 - [ ] 修馬哈與三種對策。應戰流程。
 - [ ] 第 6、7 關。
-- [ ] 單元測試 9（修馬哈部分）、13；端對端測試 `race.mjs`。（已完成：13）
+- [ ] 單元測試 9（修馬哈部分）、13；端對端測試 `race.mjs`。（已完成：13、`race.mjs`。還沒做：9 的修馬哈事件部分）
 
 驗收：第 9.8 節通過。親手玩一場有速度感，彎道和坡道表現正確。
 

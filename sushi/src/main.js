@@ -12,6 +12,8 @@ import { createDemoScene } from './modes/demo.js';
 import { createAudio } from './core/audio.js';
 import { SAVE_KEYS } from './core/save.js';
 import { createLevelSelectScene, startLevel } from './modes/owner-level.js';
+import { createRaceScene } from './mini/race/game.js';
+import { TRACKS } from './data/tracks.js';
 
 const W = 480;
 const H = 270;
@@ -137,6 +139,9 @@ app.routes.level = (a, arg) => {
   scenes.reset(createLevelSelectScene(a));
   return startLevel(a, Number(arg) || 1) ? true : null;
 };
+
+// ?scene=race 或 ?scene=race:賽道id：直接開一場賽車（自由遊玩）
+app.routes.race = (a, arg) => createRaceScene(a, { track: TRACKS[arg] ? arg : 'itamae', level: 3 });
 
 app.input = createInput(canvas, W, H, (evt) => scenes.input(evt));
 

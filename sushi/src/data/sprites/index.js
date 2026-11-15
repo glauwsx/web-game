@@ -2,6 +2,7 @@
 import { TILE_SPRITES, WALL_SPRITES, SHADOW_SPRITE } from './tiles.js';
 import { FURNITURE_SPRITES, SCENERY_SPRITES } from './furniture.js';
 import { SUSHI_SPRITES } from './sushi.js';
+import { RACE_SPRITES } from './race.js';
 import { buildCharacter, POSES } from './characters.js';
 import { CAST_LOOKS, CUSTOMER_LOOKS } from '../characters.js';
 
@@ -15,6 +16,7 @@ export const STATIC_SPRITES = {
   ...FURNITURE_SPRITES,
   ...SCENERY_SPRITES,
   ...SUSHI_SPRITES,
+  ...RACE_SPRITES,
 };
 
 /** 所有角色外觀：id → look。一般顧客的 id 是「類型.編號」，例如 'normal.0'。 */
