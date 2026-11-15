@@ -88,6 +88,7 @@ export function createRaceScene(app, opts = {}) {
         opts.onDone ? null : h('button', { class: 'btn plain', dataset: { id: 'race-again' }, onclick: () => app.scenes.replace(createRaceScene(app, opts)) }, t('race.again')),
         h('button', { class: 'btn red', dataset: { id: 'race-done' }, onclick: () => { app.scenes.pop(); if (opts.onDone) opts.onDone(result); } }, t('common.ok'))));
     scene.result = result;
+    updateHud();
   }
 
   function updateHud() {
