@@ -69,14 +69,20 @@ export function createRaceScene(app, opts = {}) {
     const sh = race.cars.find((c) => c.kind === 'shumaha');
     const shumahaPlace = sh ? sh.place || placeOf(race, sh) : 0;
     const result = { place, time: p.finishT, integrity: Math.round(p.integrity), prize: prizeForPlace(place), shumahaPlace };
-    app.sfx(place <= 3 ? 'win' : 'lose');
+    // 跟修馬哈比：只看有沒有跑在他前面
+    const vsShumaha = !!opts.shumaha && shumahaPlace > 0;
+    const beat = vsShumaha && place < shumahaPlace;
+    app.sfx((vsShumaha ? beat : place <= 3) ? 'win' : 'lose');
     el.result.classList.remove('hidden');
     el.result.replaceChildren(
       h('h1', { class: 'menu-title' }, t('race.finish')),
       h('div', { class: 'res-line big' }, h('span', null, t('race.result.place')), h('span', { dataset: { id: 'race-place' } }, t('race.place', { n: place }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.time')), h('span', null, t('race.seconds', { n: result.time.toFixed(1) }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.integrity')), h('span', null, `${result.integrity}%`)),
-      h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', null, t(`race.prize.${result.prize}`))),
+      vsShumaha
+        ? h('div', { class: 'res-line' }, h('span', null, t('race.result.shumaha')), h('span', null, t('race.place', { n: shumahaPlace })))
+        : h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', null, t(`race.prize.${result.prize}`))),
+      vsShumaha ? h('div', { class: `pk-verdict ${beat ? 'win' : 'lose'}`, dataset: { id: 'race-verdict' } }, t(beat ? 'race.result.beat' : 'race.result.lost')) : '',
       h('div', { class: 'menu-foot' },
         opts.onDone ? null : h('button', { class: 'btn plain', dataset: { id: 'race-again' }, onclick: () => app.scenes.replace(createRaceScene(app, opts)) }, t('race.again')),
         h('button', { class: 'btn red', dataset: { id: 'race-done' }, onclick: () => { app.scenes.pop(); if (opts.onDone) opts.onDone(result); } }, t('common.ok'))));

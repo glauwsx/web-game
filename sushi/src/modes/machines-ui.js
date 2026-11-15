@@ -55,7 +55,7 @@ facilitySections.push((s0, env, ups) => {
       class: 'btn plain mini', dataset: { id: `trial-${id}` },
       onclick: () => { if (env.app) openTrial(env.app, cur()); },
     }, t('mach.trial'));
-    wrap.appendChild(h('div', { class: 'row mach-row', dataset: { furn: id } },
+    wrap.appendChild(h('div', { class: 'row mach-row', dataset: { furn: id, kind } },
       h('div', { class: 'row-main' },
         h('div', { class: 'row-name' }, machineName(s0, f0),
           h('small', null, ` ${kind === 'pachinko' ? t(`pk.board.${boardIdOf(f0)}`) : t(`track.${trackIdOf(f0)}`)}`)),
