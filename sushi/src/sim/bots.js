@@ -30,7 +30,7 @@ function goodPrep(state) {
   for (const f of state.shop.furniture) {
     const kind = machineOf(f);
     if (kind === 'pachinko' && f.nail !== B.BOT.NAIL) acts.push({ type: 'setNail', id: f.id, nail: B.BOT.NAIL });
-    if (kind === 'race' && f.level !== B.BOT.RACE_LEVEL) acts.push({ type: 'setCarLevel', id: f.id, level: B.BOT.RACE_LEVEL });
+    if (kind === 'race' && f.level !== B.BOT.RACE_LEVEL) acts.push({ type: 'setRaceLevel', id: f.id, level: B.BOT.RACE_LEVEL });
   }
   return acts;
 }

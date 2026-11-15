@@ -42,7 +42,7 @@ function shopA() {
   };
 }
 
-/** 第 6、7 關：再加一座賽車機台。 */
+/** 第 6、7 關：再加 3 台賽車機台。 */
 function shopB(track) {
   return {
     w: 13, h: 10, floor: 'wood', door: { gx: 5 },
@@ -50,7 +50,9 @@ function shopB(track) {
       { type: 'pachinko', x: 10, y: 0 },
       { type: 'pachinko', x: 11, y: 0 },
       { type: 'pachinko', x: 12, y: 0 },
-      { type: 'raceTrack', x: 8, y: 4, track },
+      { type: 'raceCab', x: 8, y: 4, track },
+      { type: 'raceCab', x: 9, y: 4, track },
+      { type: 'raceCab', x: 10, y: 4, track },
       { type: 'tableSet', x: 1, y: 5 },
       { type: 'plant', x: 0, y: 0 },
       { type: 'lantern', x: 12, y: 9 },
@@ -84,7 +86,9 @@ function shopD() {
       { type: 'pachinko', x: 13, y: 0 },
       { type: 'pachinko', x: 14, y: 0 },
       { type: 'pachinko', x: 15, y: 0 },
-      { type: 'raceTrack', x: 11, y: 4, track: 2 },
+      { type: 'raceCab', x: 11, y: 4, track: 2 },
+      { type: 'raceCab', x: 12, y: 4, track: 2 },
+      { type: 'raceCab', x: 13, y: 4, track: 2 },
       { type: 'tableSet', x: 1, y: 5 },
       { type: 'uniformSign', x: 0, y: 9 },
       { type: 'plant', x: 0, y: 0 },
@@ -255,7 +259,7 @@ export const LEVELS = [
     reputation: 45,
     baseArrival: 0.165,
     mix: { normal: 5, salaryman: 3, family: 1, tourist: 2, pachinkoFan: 1, raceFan: 2 },
-    goal: { kind: 'rival', target: 100000 },
+    goal: { kind: 'rival', target: 105000 },
     intro: talk(6, 'intro', ['ryo', 'honda', 'ryo', 'reiko', 'ryo']),
     pass: talk(6, 'pass', ['honda', 'ryo', 'yuutsu']),
     fail: talk(6, 'fail', ['yuutsu', 'ryo'], [2]),
@@ -275,7 +279,7 @@ export const LEVELS = [
     reputation: 50,
     baseArrival: 0.17,
     mix: { normal: 5, salaryman: 3, family: 1, tourist: 2, pachinkoFan: 1, raceFan: 2 },
-    goal: { kind: 'rival', target: 105000 },
+    goal: { kind: 'rival', target: 115000 },
     events: [
       { kind: 'shumaha', at: 14 * 60, jitter: 40 },
       { kind: 'bucho', at: 18 * 60 + 30, jitter: 40 },
@@ -344,7 +348,7 @@ export const LEVELS = [
     reputation: 55,
     baseArrival: 0.18,
     mix: { ...MIX_LATE, pachinkoFan: 1, raceFan: 2 },
-    goal: { kind: 'rival', target: 145000 },
+    goal: { kind: 'rival', target: 165000 },
     features: { cheap: true, disguise: true, uniform: true },
     events: [
       { kind: 'pro', at: 12 * 60 + 20, jitter: 20, count: 2 },

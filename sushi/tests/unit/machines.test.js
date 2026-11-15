@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createShopState, applyAction, stepShop } from '../../src/sim/shop.js';
 import {
-  wordOfMouth, playChance, awardPieces, raceResults, prizeTiers, pachinkoTiers, bossesNeedingChoice,
+  wordOfMouth, playChance, awardPieces, racePlay, prizeTiers, pachinkoTiers, bossesNeedingChoice,
 } from '../../src/sim/machines.js';
 import { cancelOrdersOf } from '../../src/sim/orders.js';
 import { runDay } from '../../src/sim/bots.js';
@@ -13,7 +13,7 @@ import { sampleConfig } from './helpers.js';
 
 const MENU = ['tamago', 'kappa', 'ika', 'sake', 'ebi', 'maguro', 'anago', 'ikura', 'uni'];
 
-/** 一間有 2 台小鋼珠和 1 條賽道的店。 */
+/** 一間有 2 台小鋼珠和 2 台賽車機台的店。 */
 function machineConfig(over = {}) {
   return sampleConfig({
     shop: {
@@ -24,7 +24,8 @@ function machineConfig(over = {}) {
         { type: 'counterSeat', x: 3, y: 2 },
         { type: 'pachinko', x: 6, y: 0 },
         { type: 'pachinko', x: 7, y: 0 },
-        { type: 'raceTrack', x: 7, y: 4 },
+        { type: 'raceCab', x: 8, y: 0 },
+        { type: 'raceCab', x: 9, y: 0 },
       ],
     },
     menu: MENU,
@@ -62,11 +63,12 @@ test('機台：愛好者會來玩，入場費算進營業額，獎品排進師�
   }
   while (s.phase === 'open') stepShop(s);
   const pk = machines(s, 'pachinko');
-  const tr = machines(s, 'raceTrack')[0];
+  const cabs = machines(s, 'raceCab');
+  const tr = { income: cabs.reduce((a, f) => a + f.income, 0), races: cabs.reduce((a, f) => a + (f.races || 0), 0) };
   assert.ok(sawPlay, '有顧客在玩機台');
   assert.ok(sawPrize, '有獎品訂單');
   assert.ok(pk.some((f) => f.income > 0), '小鋼珠有收入');
-  assert.ok(tr.income > 0 && tr.races > 0, `賽道有比賽（${tr.races} 場）`);
+  assert.ok(tr.income > 0 && tr.races > 0, `賽車機台有人玩（${tr.races} 場）`);
   const income = pk.reduce((a, f) => a + f.income, 0) + tr.income;
   assert.equal(s.day.fees, income, '入場費全部算進營業額');
   assert.ok(s.day.prizePieces > 0, '有送出獎品壽司');
@@ -102,14 +104,14 @@ test('口碑與玩的機率（計劃書 8.5）', () => {
   f.wom = [0];
   assert.ok(Math.abs(playChance(f) - 0.2 * 0.5) < 1e-9);
   // 賽道的除數是 2000
-  const tr = machines(s, 'raceTrack')[0];
+  const tr = machines(s, 'raceCab')[0];
   assert.ok(Math.abs(playChance(tr) - (1.2 - 800 / 2000) * 1.1) < 1e-9);
 });
 
 test('操作：釘子、入場費、壽司車等級有範圍', () => {
   const s = createShopState(machineConfig());
   const f = machines(s, 'pachinko')[0];
-  const tr = machines(s, 'raceTrack')[0];
+  const tr = machines(s, 'raceCab')[0];
   assert.equal(applyAction(s, { type: 'setNail', id: f.id, nail: 5 }).ok, true);
   assert.equal(f.nail, 5);
   assert.equal(applyAction(s, { type: 'setNail', id: f.id, nail: 6 }).ok, false);
@@ -119,9 +121,9 @@ test('操作：釘子、入場費、壽司車等級有範圍', () => {
   assert.equal(applyAction(s, { type: 'setFee', id: f.id, fee: 1100 }).ok, false);
   assert.equal(applyAction(s, { type: 'setFee', id: tr.id, fee: 1500 }).ok, true);
   assert.equal(applyAction(s, { type: 'setFee', id: tr.id, fee: 400 }).ok, false);
-  assert.equal(applyAction(s, { type: 'setCarLevel', id: tr.id, level: 5 }).ok, true);
+  assert.equal(applyAction(s, { type: 'setRaceLevel', id: tr.id, level: 5 }).ok, true);
   assert.equal(tr.level, 5);
-  assert.equal(applyAction(s, { type: 'setCarLevel', id: tr.id, level: 0 }).ok, false);
+  assert.equal(applyAction(s, { type: 'setRaceLevel', id: tr.id, level: 0 }).ok, false);
 });
 
 test('獎品：沒貨就降一級，全部沒貨發一張招待券，評價下降', () => {
@@ -153,14 +155,13 @@ test('獎品換算：套餐、小鋼珠結果', () => {
 
 test('賽車結果：每位顧客各自算贏過哪幾款，修馬哈幾乎都全拿', () => {
   const s = createShopState(machineConfig());
-  const f = machines(s, 'raceTrack')[0];
+  const f = machines(s, 'raceCab')[0];
   let sweeps = 0;
   for (let i = 0; i < 200; i++) {
-    const es = [{ id: 1, skill: 1.04 }, { id: 2, skill: 0.9 }, { id: 3, skill: 0.6 }];
-    const w = raceResults(s, f, es);
-    if (w[1].length === B.RACE.LINEUP.length) sweeps++;
-    assert.deepEqual(w[3], [], '技術很差的一台都贏不了');
-    assert.deepEqual(w[2], B.RACE.LINEUP.slice(0, w[2].length), '從最慢的開始連續幾款');
+    const w = [1.04, 0.9, 0.6].map((skill) => racePlay(s, f, { skill }));
+    if (w[0].length === B.RACE.LINEUP.length) sweeps++;
+    assert.deepEqual(w[2], [], '技術很差的一台都贏不了');
+    assert.deepEqual(w[1], B.RACE.LINEUP.slice(0, w[1].length), '從最慢的開始連續幾款');
   }
   assert.ok(sweeps > 190, `修馬哈全拿 ${sweeps} / 200 次`);
 });
@@ -228,7 +229,7 @@ test('修馬哈：連續跑 8 場，幾乎都贏過全部壽司車', () => {
   applyAction(s, { type: 'bossChoice', id: c.id, choice: 'allow' });
   const firsts = [];
   runUntil(s, () => {
-    if (c.lastPlace && firsts.length < c.played) firsts.push(c.lastPlace);
+    if (c.lastWon && firsts.length < c.played) firsts.push(B.RACE.LINEUP.length + 1 - c.lastWon.length);
     return c.st !== 'play';
   });
   assert.equal(c.played, B.SHUMAHA.RACES);
@@ -236,7 +237,7 @@ test('修馬哈：連續跑 8 場，幾乎都贏過全部壽司車', () => {
   assert.ok(f.payout > 0);
 });
 
-test('修馬哈：調高壽司車等級，賽道變成等級 5，再跑 2 場就走', () => {
+test('修馬哈：調高難度，機台變成難度 5，再跑 2 場就走', () => {
   const { s, c, f } = bossDay('shumaha');
   applyAction(s, { type: 'bossChoice', id: c.id, choice: 'counter' });
   assert.equal(f.level, 5);
@@ -255,7 +256,7 @@ test('修馬哈：親自應戰，贏了付 ¥10,000、評價 +3；輸了拿走�
   assert.ok(Math.abs(a.s.reputation - (rep + B.SHUMAHA.WIN_REP)) < 1e-9);
   assert.equal(a.c.st, 'leave');
   // 他不在了，賽道下一場不會有他
-  runUntil(a.s, () => !a.s.shop.furniture.find((x) => x.id === a.f.id).race);
+  assert.equal(a.s.shop.furniture.find((x) => x.id === a.f.id).occ[0], 0, '機台空出來了');
   const b = bossDay('shumaha');
   applyAction(b.s, { type: 'bossChallenge', id: b.c.id });
   applyAction(b.s, { type: 'bossChallengeResult', id: b.c.id, win: false });

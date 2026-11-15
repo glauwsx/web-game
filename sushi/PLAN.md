@@ -539,7 +539,7 @@ flowchart TD
 | counterSeat | 吧台座 | 1×1 | 8,000 | 1 個座位 |
 | tableSet | 桌位 | 2×2 | 20,000 | 4 個座位 |
 | pachinko | 小鋼珠台 | 1×2（含椅子） | 80,000 | 1 位顧客玩小鋼珠 |
-| raceCab | 賽車機台 | 1×2 | 150,000 | 一台坐一位顧客。坐著玩，跟小鋼珠台同樣的擺法（程式裡目前還是舊的 `raceTrack` 4×3，見階段 5 的清單） |
+| raceCab | 賽車機台 | 1×2 | 150,000 | 一台坐一位顧客。坐著玩，跟小鋼珠台同樣的擺法 |
 | fridge | 冰箱 | 1×1 | 30,000 | 庫存上限 +150 |
 | lantern | 招牌燈籠 | 1×1 | 10,000 | 吸引力 +0.05 |
 | fishTank | 魚缸 | 2×1 | 40,000 | 吸引力 +0.10 |
@@ -890,11 +890,11 @@ AI 顧客不即時跑賽車。用公式決定贏過哪幾台（起始值）。�
 | 3 | 日薪打工仔本田 | 11:00–21:00 | 員工分配、桌位、觀光客、部長 | 50,000 | 部長來 1 次 |
 | 4 | 小鋼珠壽司開張 | 11:00–21:00 | 小鋼珠台 3 台、釘子設定、試玩、寺井和第 2 座板前檯 | 80,000 | 無 |
 | 5 | 職業玩家來襲 | 11:00–21:00 | 強敵應對 | 85,000 | 職業玩家 3 人，分 2 波 |
-| 6 | 賽車壽司開張 | 11:00–21:00 | 賽車機台、難度、試玩 | 100,000 | 無 |
-| 7 | 修馬哈來了 | 11:00–21:00 | 賽車強敵 | 105,000 | 修馬哈 1 次、部長 1 次 |
+| 6 | 賽車壽司開張 | 11:00–21:00 | 賽車機台 3 台、難度、試玩 | 105,000 | 無 |
+| 7 | 修馬哈來了 | 11:00–21:00 | 賽車強敵 | 115,000 | 修馬哈 1 次、部長 1 次 |
 | 8 | 中川水產的高級魚 | 11:00–21:00 | 三種賣法、均一價招牌、美食家 | 130,000 | 開場獲贈高級食材 100 單位，資金只有 ¥10,000。可以賣掉換現金 |
 | 9 | 神之舌 | 11:00–21:00 | 檸檬試吃 | 140,000 | 檸檬來 1 次。被吃出來：當日營業額 −30% |
-| 10 | 真工夫對決 | 11:00–21:00 | 全部要素 | 145,000 | 職業玩家 2 人、部長、修馬哈、檸檬都會來。被檸檬吃出來不扣營業額（才走得到平手結局） |
+| 10 | 真工夫對決 | 11:00–21:00 | 全部要素 | 165,000 | 職業玩家 2 人、部長、修馬哈、檸檬都會來。被檸檬吃出來不扣營業額（才走得到平手結局） |
 
 目標是階段 6 用平衡測試調出來的。原本的起始值到 ¥200,000，但兩位師傅的產能大約一天 ¥190,000，所以往下調。
 
@@ -1227,7 +1227,7 @@ flowchart TD
 **已經做完、不要重做的部分**
 
 1. 小鋼珠：物理 `mini/pachinko/physics.js`、AI `ai.js`、可玩場景 `game.js` 和 `render.js`、2 個檯面和統計表。`?scene=pachinko`（或 `pachinko:matsuri`）直接開。
-2. 賽車：物理、AI、偽 3D 繪圖、可玩場景、3 條賽道。`?scene=race:賽道id` 直接開。
+2. 賽車：物理、AI、偽 3D 繪圖、可玩場景、3 條賽道、車頂壽司的像素圖、HUD 壽司圖示。`?scene=race:賽道id` 直接開。
 3. 機台和經營模擬的整合：`sim/machines.js`（純邏輯）和 `modes/machines-ui.js`（介面）。
 4. 職業玩家、修馬哈的事件和三種對策，親自應戰的流程。
 5. 第 1 到 7 關的資料、對話、提示。第 4 到 7 關的目標營業額是起始值，還沒調平衡。
@@ -1263,17 +1263,17 @@ flowchart TD
 - `data/balance.js` 的 `RACE`：`LINEUP`、`PLAYER_SUSHI`、`TOP_RATIO`、`RATIO_STEP`、新的 `AI_SKILL` 和 `AI_NOISE`。舊的 `SHOP_RATIO`、`SHOP_SPREAD`、`THETA` 已經拿掉。`SHUMAHA.LOSE_SETS` 改成 `LOSE_MULT`。
 - `mini/race/physics.js`：每台車有 `car.sushi`。`rivalRatio(難度, i)`。`wonSushi(race)` 回傳玩家目前贏過的壽司 id（比賽中和結束後都可以呼叫）。
 - `mini/race/ai.js`：`aiWon`、`prizesFor`（空的就給小黃瓜捲）、`prizeValue`。舊的 `aiPlace`、`prizeForPlace` 已經拿掉。
-- `mini/race/game.js`：`result = { place, time, integrity, won, prizes, shumahaPlace }`。結果畫面列出贏到的壽司。HUD 暫時用文字顯示「贏過 n/5」。
-- `sim/machines.js`：`raceResults`（取代 `racePlaces`，每位顧客各自算）、`awardSushi`（發指定的壽司，沒貨就照等級降級）。修馬哈應戰輸了：5 款各 2 貫。
+- `mini/race/game.js`：`result = { place, time, integrity, won, prizes, shumahaPlace }`。結果畫面用圖示列出贏到的壽司和價值。HUD 是 5 個壽司圖示（Opus 做的）。
+- `sim/machines.js`：`racePlay`（機台改成一台一人之後取代 `raceResults`）、`awardSushi`（發指定的壽司，沒貨就照等級降級）。修馬哈應戰輸了：5 款各 2 貫。
 - 遊戲文字（`strings.js`）：第 6、7 關的對話和提示、修馬哈選單、設施名稱都改成新規則。「車速」改叫「難度」。
 - 單元測試（9.8-1 新寫法、對手陣容、回饋率表、`raceResults`）和端對端測試 `race.mjs` 都通過。
 
-還沒做的（全部留給 Opus。規格已經定好，不需要再做設計決定）：
+Opus 的清單（1 到 4 已經做完，2026-11-15）：
 
-1. 車子的像素圖（`data/sprites/race.js`、`render.js` 畫對手和玩家的地方）：目前對手用 `race.car.shop0` 到 `shop4`，玩家用 `race.car.player`，車頂的壽司不是對應的那一款。改成每台車的車頂畫 `car.sushi` 那一款（玉子黃色、鮭魚橘色、赤身紅色、鮭魚卵橘紅顆粒加海苔、大腹粉紅色帶油花、小黃瓜捲是海苔捲中間一點綠）。圖的名稱改成 `race.car.壽司id`，並更新 `sprite.` 字串和圖鑑頁。修馬哈的車維持 `race.car.shumaha`，車頂是小黃瓜捲。
-2. HUD（`game.js` 裡標了 `TODO(Opus)`）：把「贏過 n/5」改成 5 個壽司圖示（用 `src/data/sprites/sushi.js` 現成的圖示）。贏過的點亮，還沒贏過或被追回去的變暗。剛超過時跳一下提示文字「入手：某某」並播音效；被追回去時播 `deny`。圖示不可以改大小或位置（見階段 3 的動畫規則）。
-3. 結果畫面：贏到的壽司用圖示加名稱列出，加一行「價值 ¥n」（`prizeValue`）。
-4. 家具改成機台（7.9）：目前還是 `raceTrack`，4×3，4 個站位，有「報名、等人、一起開賽」的流程。改成 `raceCab`：1×2，¥150,000，一個 `play` 位置，坐姿，照 `pachinko` 的定義寫。顧客一坐下就開始，佔用 `RACE.RACE_MIN` 分鐘，流程跟小鋼珠一樣。要拿掉的：`f.race` 的 `signup`／`run`／`waiting`、`RACE.SIGNUP_MIN`、`stepMachines` 裡的報名倒數、`mach.race.signup` 字串。要改的：`data/furniture.js`、`data/sprites/furniture.js`（畫一台有方向盤和螢幕的街機）、`sim/machines.js`、`sim/shop.js`、`sim/economy.js`、`modes/machines-ui.js`（`furnitureDraw` 改成畫機台螢幕的動畫，不再畫 4 台小車）、`data/levels.js` 第 6、7 關的店面（建議各放 3 台）、`tests/unit/machines.test.js`、`tests/e2e/race.mjs`。操作名稱 `setCarLevel` 改成 `setRaceLevel`。
+1. （已完成）車子的像素圖（`data/sprites/race.js`、`render.js` 畫對手和玩家的地方）：目前對手用 `race.car.shop0` 到 `shop4`，玩家用 `race.car.player`，車頂的壽司不是對應的那一款。改成每台車的車頂畫 `car.sushi` 那一款（玉子黃色、鮭魚橘色、赤身紅色、鮭魚卵橘紅顆粒加海苔、大腹粉紅色帶油花、小黃瓜捲是海苔捲中間一點綠）。圖的名稱改成 `race.car.壽司id`，並更新 `sprite.` 字串和圖鑑頁。修馬哈的車維持 `race.car.shumaha`，車頂是小黃瓜捲。
+2. （已完成）HUD（`game.js` 裡標了 `TODO(Opus)`）：把「贏過 n/5」改成 5 個壽司圖示（用 `src/data/sprites/sushi.js` 現成的圖示）。贏過的點亮，還沒贏過或被追回去的變暗。剛超過時跳一下提示文字「入手：某某」並播音效；被追回去時播 `deny`。圖示不可以改大小或位置（見階段 3 的動畫規則）。
+3. （已完成）結果畫面：贏到的壽司用圖示加名稱列出，加一行「價值 ¥n」（`prizeValue`）。
+4. （已完成）家具改成機台（7.9）：目前還是 `raceTrack`，4×3，4 個站位，有「報名、等人、一起開賽」的流程。改成 `raceCab`：1×2，¥150,000，一個 `play` 位置，坐姿，照 `pachinko` 的定義寫。顧客一坐下就開始，佔用 `RACE.RACE_MIN` 分鐘，流程跟小鋼珠一樣。要拿掉的：`f.race` 的 `signup`／`run`／`waiting`、`RACE.SIGNUP_MIN`、`stepMachines` 裡的報名倒數、`mach.race.signup` 字串。要改的：`data/furniture.js`、`data/sprites/furniture.js`（畫一台有方向盤和螢幕的街機）、`sim/machines.js`、`sim/shop.js`、`sim/economy.js`、`modes/machines-ui.js`（`furnitureDraw` 改成畫機台螢幕的動畫，不再畫 4 台小車）、`data/levels.js` 第 6、7 關的店面（建議各放 3 台）、`tests/unit/machines.test.js`、`tests/e2e/race.mjs`。操作名稱 `setCarLevel` 改成 `setRaceLevel`。
 5. 第 6、7 關的平衡（階段 6 一起調）：改版後獎品比舊規則輕很多（一般客難度 3 一場平均送出 ¥520 的壽司，舊規則是 4 到 8 貫的套餐）。目標營業額要重新跑數字。
 6. 顧客版本（階段 8）：13.3 的分數用 `prizeValue(result.prizes) × 完整度 / 100`。13.4 的圖鑑用 `result.prizes` 點亮。
 7. 可以改進但不是必要的：機台外框（賽車畫面四周畫成街機螢幕的邊框）。
@@ -1300,7 +1300,7 @@ flowchart TD
 - `good` 的策略寫在 `sim/bots.js`，數值在 `balance.js` 的 `BOT`。它不賣便宜魚、不掛均一價（營業額只算收入，高級魚賣原價就夠）。第 8 關 `naive` 會輸，是因為資金只有 ¥10,000、不補貨、寺井在休息。
 - 檸檬：邏輯在 `sim/bosses.js`（`SPAWNERS.lemon`、`lemonNotice`、`stepLemon`）。關卡事件只要寫 `{ kind: 'lemon', at }`，預告會自動排在 30 分鐘前。結果記在 `state.flags.lemonResult`（`'pass'`、`'fail'`）、`lemonTests`、`lemonPassed`（無限模式的任務會用到）。扣營業額的比例是設定的 `lemonPenalty`，打烊時扣。
 - 第 10 關的結局由 `lv.endings(state, result)` 選：`fail`、`tie`（過關但被吃出來）、`perfect`（三星）、`pass`（過關、沒作弊、沒三星。計劃書只寫三種，這是多出來的第四種）。
-- 賽道家具改成 `raceCab` 之後（「賽車規則改版」清單 4），第 6、7、10 關要重跑 `tools/sim-levels.mjs`。建議每關放 4 台，總位置數不變。
+- 賽車機台 `raceCab` 已經合併進來（第 6、7、10 關各 3 台），目標也重新調過。
 
 **階段 6 之前留下的筆記（平衡，已經處理完，留著參考）**
 
@@ -1372,13 +1372,14 @@ flowchart TD
 
 - 已定案的機台設計（階段 4、5）：
   - 純邏輯在 `src/sim/machines.js`，介面在 `src/modes/machines-ui.js`（`import` 就會註冊到 `facilitySections`、`furnitureInfo`、`furnitureDraw`、`shopWatchers`）。新的模式（無限、顧客版本）要用機台，記得 `import './machines-ui.js'`。
-  - 顧客的 `c.goal` 是 `'eat'`、`'pachinko'` 或 `'race'`。`customers.js` 的 `machineHooks` 是掛勾：建立顧客時決定 goal（`chooseGoal`）、到門口找機台（`findSpot`）、找不到時愛好者和強敵排隊、一般客改成吃飯（`canWait`）、走到機台（`arrive`）、`'play'` 和 `'prize'` 狀態的每個 tick（`step`）。賽道的報名和比賽時間在 `stepMachines`（`stepShop` 每個 tick 呼叫）。
+  - 顧客的 `c.goal` 是 `'eat'`、`'pachinko'` 或 `'race'`。`customers.js` 的 `machineHooks` 是掛勾：建立顧客時決定 goal（`chooseGoal`）、到門口找機台（`findSpot`）、找不到時愛好者和強敵排隊、一般客改成吃飯（`canWait`）、走到機台（`arrive`）、`'play'` 和 `'prize'` 狀態的每個 tick（`step`）。賽車機台跟小鋼珠台走同一條流程（`startRace`、`resolveRace`），沒有另外的每 tick 處理。
   - 一般客也會去玩機台：進門時的機率 = `MACHINE_CURIOUS[類型] × 最想玩那一台的玩的機率`（一般客 0.15、觀光客 0.1，計劃書沒寫，自己定的）。這樣的顧客只玩 1 次，不點餐。
   - 愛好者第 1 次一定玩；之後每次用「玩的機率」決定要不要再玩。強敵照次數玩完。
   - 獎品在遊玩結束時一次排進師傅的佇列（`createOrder(..., { prize: true })`，扣庫存、不收錢、不算菜單的「今日賣出」）。品項從菜單上有庫存的該等級隨機選，沒有就降一級。
   - **招待券是一次遊玩最多一張**（評價 −1）。計劃書沒寫是每貫還是每次；每貫扣的話一次大獎就扣 8，naive 跑第 5 關評價會掉到 0。
   - 吃獎品：顧客留在機台前，每貫 2 分鐘，從進入 `'prize'` 狀態開始最多 10 分鐘。沒做完的獎品「打包」：訂單取消，但食材不退回（`cancelOrdersOf` 對獎品不退庫存）。
-  - 賽車：第一位報名後等 1 分鐘開賽（或 4 個位置都滿了就馬上開），比賽 4 分鐘。結果在開賽時就算好（`raceResults`）：每位顧客各自算贏過哪幾款，互相不影響。比賽中走到賽道的人等下一場。一台都沒贏過的安慰獎是小黃瓜捲一貫。（改成一台一人的機台之後，報名和等待的流程要拿掉。）
+  - 賽車：機台 `raceCab` 一台一人，一坐下就開始，佔用 `RACE_MIN` 分鐘。結束時用 `racePlay`（`aiWon`）算贏過哪幾款，獎品用 `awardSushi` 發。一台都沒贏過的安慰獎是小黃瓜捲一貫。賽車機台的欄位：`level`（難度）、`fee`、`track`（`TRACK_ORDER` 的索引）、`wom`、`income`、`payout`、`races`。
+  - `RACE_ATTRACTION`（0.12）原本是一條 4 人賽道的吸引力，現在是每台機台各加一次。第 6、7 關各 3 台，加起來 0.36，階段 6 要重看。
   - 強敵：`registerEvent('pro')`、`registerEvent('shumaha')`，事件可以帶 `count`（一次來幾人）。強敵坐上機台時 `c.needChoice = true`，介面跳出對策選單（Esc = 放任）。操作是 `bossChoice`（`'allow'`、`'counter'`）、`bossChallenge`、`bossChallengeResult`（`win`）。職業玩家挑釘子最鬆的台，修馬哈挑等級最低的賽道。
   - 職業玩家的目標成績是 `simulatePlay(sd = 0)` 的一次結果，可能是 ¥0（30 顆都進啟動口但沒中大獎）。這時玩家只要贏到任何東西就算贏。
   - 親自應戰中途離開：小鋼珠算放棄，用目前的成績結算；賽車算輸。
@@ -1447,8 +1448,8 @@ flowchart TD
 - [x] 第 6、7 關。（目標營業額是起始值，階段 6 要調）
 - [x] 單元測試 9（修馬哈部分）、13；端對端測試 `race.mjs`。
 - [x] 賽車規則改版（機台、小黃瓜捲、贏過哪台得哪款）：純邏輯、測試、獎品發放、遊戲文字。
-- [ ] 賽車規則改版的畫面：車頂壽司的像素圖、HUD 壽司圖示、結果畫面。（見「賽車規則改版」的清單 1 到 3）
-- [ ] 賽道家具改成一台一人的賽車機台 `raceCab`。（清單 4）
+- [x] 賽車規則改版的畫面：車頂壽司的像素圖、HUD 壽司圖示、結果畫面。（見「賽車規則改版」的清單 1 到 3）
+- [x] 賽道家具改成一台一人的賽車機台 `raceCab`。（清單 4）
 
 驗收：第 9.8 節通過。親手玩一場有速度感，彎道和坡道表現正確。
 

@@ -181,13 +181,13 @@ export function drawRace(ctx, race, view) {
         // 在這一段的近端和遠端之間內插
         const far = pts[n + 1] || pt;
         const ip = { scale: pt.scale + (far.scale - pt.scale) * e.pct, x: pt.x + (far.x - pt.x) * e.pct, y: pt.y + (far.y - pt.y) * e.pct, w: pt.w + (far.w - pt.w) * e.pct };
-        drawSprite(e.c.kind === 'shumaha' ? 'race.car.shumaha' : `race.car.shop${(e.c.id - 1) % 5}`, ip, e.c.x, pt.clip, false);
+        drawSprite(e.c.kind === 'shumaha' ? 'race.car.shumaha' : `race.car.${e.c.sushi}`, ip, e.c.x, pt.clip, false);
       }
     }
   }
 
   // 玩家的車：固定在畫面下方中間。速度越快抖動越明顯
-  const sp = getSprite('race.car.player');
+  const sp = getSprite(`race.car.${p.sushi}`);
   const k = 2.4;
   const bounce = Math.round(Math.sin(view.time / 40) * (p.speed / R.MAX_SPEED) * 1.2);
   const lean = Math.round((view.steer || 0) * 3);

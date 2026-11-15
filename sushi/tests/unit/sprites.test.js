@@ -35,7 +35,7 @@ test('像素圖：12 種壽司圖示都是 12×8', () => {
 });
 
 test('像素圖：計劃書列的家具都有圖', () => {
-  for (const id of ['chefStation', 'counterSeat', 'tableSet', 'pachinko', 'raceTrack', 'fridge', 'lantern', 'fishTank', 'plant', 'uniformSign']) {
+  for (const id of ['chefStation', 'counterSeat', 'tableSet', 'pachinko', 'raceCab', 'fridge', 'lantern', 'fishTank', 'plant', 'uniformSign']) {
     assert.ok(STATIC_SPRITES[`furn.${id}`], id);
   }
   for (const id of ['wood', 'tatami', 'stone', 'street', 'grass']) assert.ok(STATIC_SPRITES[`tile.${id}`], id);

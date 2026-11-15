@@ -202,7 +202,7 @@ export function createShopScene(app, opts) {
         it.back = face.back; it.flip = face.flip;
         it.z = slot.z;
         it.depth = furnitureDepth(f.x, f.y, def.w, def.h) + 0.005 + c.slot * 0.0001;
-        // 站在賽道前面的人：至少要畫在賽道後面（賽道很寬，用格子座標算的深度會比賽道小）
+        // 站著玩的位置在家具前面：至少要畫在家具後面（寬的家具用格子座標算的深度會比家具小）
         if (slot.pose === 'stand') it.depth = Math.max(it.depth, gx + gy);
         if (c.thought && c.thought.until > state.tick && (c.thought.key === 'yummy' || c.thought.key === 'win') && c.st === 'eat') it.pose = it.pose === 'sit' ? 'sit' : 'happy';
         if (customerPose[c.st]) Object.assign(it, customerPose[c.st](c, f, slot, time) || {});
