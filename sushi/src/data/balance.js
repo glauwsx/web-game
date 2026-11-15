@@ -101,3 +101,36 @@ export const BUCHO_NOTICE_MIN = 5;         // 沒變裝幾分鐘後被認出來
 export const BUCHO_FINE = 10000;
 export const BUCHO_DRAG_MIN = 60;          // 阿兩被拖走幾分鐘
 export const BANNER_MIN = 6;               // 警告橫幅顯示幾遊戲分鐘
+
+// ---- 小鋼珠 ----
+export const PACHINKO = {
+  DT: 1 / 120,            // 物理步長（秒）
+  GRAVITY: 900,
+  BALL_R: 3,
+  NAIL_R: 1.5,
+  E_NAIL: 0.5,            // 釘子彈性係數
+  E_WALL: 0.4,            // 牆壁彈性係數
+  MAX_SPEED: 700,
+  SUBSTEP_PX: 2,          // 一個子步最多移動幾像素（避免穿過釘子）
+  MAX_T: 20,              // 每顆彈珠最多模擬幾秒
+  STUCK_T: 0.6,           // 幾秒沒移動算卡住
+  STUCK_DIST: 3,
+  JITTER_SD: 0.005,       // 機台抖動（力道的標準差。計劃書起始值 0.008，為了滿足回饋率表調小）
+  DRIFT_MAX: 0.03,        // 漂移範圍
+  DRIFT_STEP: 0.004,      // 每顆彈珠漂移最多變化多少
+  BALLS: 30,              // 一次遊玩幾顆彈珠
+  FIRE_INTERVAL: 0.6,     // 按住發射鍵時，幾秒射一顆
+  BIN: 0.01,              // 統計表的力道區間寬度
+  TABLE_BALLS: 400,       // 統計表每個區間跑幾顆
+  JACKPOT: [1 / 145, 1 / 82, 1 / 49, 1 / 36, 1 / 26], // 釘子設定 1 到 5 的大獎機率（計劃書起始值 1/40 到 1/12，為了滿足回饋率表調整）
+  HAND_SD: { normal: 0.06, pachinkoFan: 0.035, pro: 0 }, // 手感誤差
+  FEE: 500,
+  FEE_MIN: 300,
+  FEE_MAX: 1000,
+  PLAY_MIN: 5,            // 一次遊玩佔用機台幾遊戲分鐘
+  PRIZE_EAT_MIN: 2,       // 吃一貫獎品幾分鐘
+  PRIZE_EAT_MAX_MIN: 10,  // 最多吃幾分鐘，吃不完打包
+  WOM_N: 20,              // 口碑看最近幾次遊玩
+  WOM_INIT: 0.6,
+  WOM_MAX: 1.2,
+};
