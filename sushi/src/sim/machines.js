@@ -478,6 +478,8 @@ export function bossChallengeResult(state, id, win) {
   const pro = c.boss === 'pro';
   if (win) {
     addRevenue(state, pro ? B.PRO.WIN_PAY : B.SHUMAHA.WIN_PAY, 'bonus');
+    const flag = pro ? 'beatPro' : 'beatShumaha';
+    state.flags[flag] = (state.flags[flag] || 0) + 1;
     addReputation(state, pro ? B.PRO.WIN_REP : B.SHUMAHA.WIN_REP);
     pushFeed(state, pro ? 'feed.proBeaten' : 'feed.shumahaBeaten', null);
     setThought(state, c, 'lose', 4);

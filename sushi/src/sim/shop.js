@@ -102,18 +102,58 @@ export function createShopState(cfg) {
     const st = (cfg.stock && cfg.stock[id]) || {};
     state.stock[id] = { premium: st.premium || 0, cheap: st.cheap || 0 };
   }
-  for (const s of cfg.staff) {
-    const st = {
-      id: s.id, role: 'off', station: null,
-      gx: -1, gy: -1, pgx: -1, pgy: -1, fx: 0, fy: 1, path: [],
-      task: null, walk: null, ready: true, gone: 0, disguised: false,
-    };
-    state.staff.push(st);
-  }
+  for (const s of cfg.staff) addStaff(state, s.id);
   for (const s of cfg.staff) setRole(state, s.id, s.role || 'off');
   if (state.goal.kind === 'rival') state.rival = createRival(state.goal.target, state.rng, state.openMin, state.closeMin);
   state.events = scheduleEvents(cfg.events, state.rng);
   return state;
+}
+
+/** 加一位員工（先在休息）。 */
+export function addStaff(state, id) {
+  const st = {
+    id, role: 'off', station: null,
+    gx: -1, gy: -1, pgx: -1, pgy: -1, fx: 0, fy: 1, path: [],
+    task: null, walk: null, ready: true, gone: 0, disguised: false,
+  };
+  state.staff.push(st);
+  return st;
+}
+
+/**
+ * 無限模式：把打烊的狀態整理成隔天的準備階段。店面、員工、菜單、庫存、資金、評價都留著。
+ */
+export function resetDay(state, seed) {
+  for (const d of state.deliveries) state.stock[d.item][d.grade] += d.qty;
+  state.seed = seed >>> 0;
+  state.rng = rngCreate(state.seed);
+  state.phase = 'prep';
+  state.tick = 0;
+  state.day = newDay();
+  state.repStart = state.reputation;
+  state.kufu = 0;
+  state.kufuUntil = 0;
+  state.deliveries = [];
+  state.customers = [];
+  state.queue = [];
+  state.orders = [];
+  state.exposedCount = 0;
+  state.feed = [];
+  state.events = [];
+  state.banner = null;
+  state.flags = {};
+  state.result = null;
+  for (const f of state.shop.furniture) {
+    f.occ = f.occ.map(() => 0);
+    if (f.income !== undefined) { f.income = 0; f.payout = 0; f.cost = 0; f.plays = 0; }
+  }
+  for (const s of state.staff) {
+    s.gone = 0;
+    s.disguised = false;
+    if (s.role === 'chef' && !state.shop.furniture.some((f) => f.id === s.station)) { s.role = 'off'; s.station = null; }
+    placeStaff(state, s);
+  }
+  state.shop.ver++;
 }
 
 /** 加一件家具（不檢查擺放規則；規則檢查在 pathfind.js 的 canPlace）。 */
@@ -293,6 +333,7 @@ export const ACTIONS = {
     const ryo = state.staff.find((s) => STAFF[s.id].player);
     if (!ryo || ryo.gone || ryo.role !== 'chef') return fail('noRyo');
     state.kufu = 0;
+    state.flags.kufuUses = (state.flags.kufuUses || 0) + 1;
     state.kufuUntil = state.tick + B.KUFU_MIN * B.TICKS_PER_MIN;
     pushFeed(state, 'feed.kufu', null);
     return { ok: true };

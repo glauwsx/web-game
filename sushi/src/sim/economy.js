@@ -123,6 +123,8 @@ export function arrivalLambda(state, hour) {
   const curve = B.HOUR_CURVE[hour] || 0;
   let l = state.baseArrival * curve * repFactor(state.reputation) * (1 + attraction(state)) * (state.arrivalMult || 1);
   if (state.uniform) l *= B.UNIFORM_ARRIVAL_MULT;
+  // 特殊刑事在場時，其他客人不太敢進來
+  if (state.customers.some((c) => c.type === 'tokkei' && c.st !== 'leave' && c.st !== 'arrive')) l *= B.TOKKEI_ARRIVAL_MULT;
   return l;
 }
 

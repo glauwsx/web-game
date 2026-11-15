@@ -37,6 +37,8 @@ export const shopWatchers = [];
  *   onClosed(state),       // 打烊時呼叫一次
  *   pauseItems(scene),     // 暫停選單的項目
  *   extraTabs, structKey,  // 額外的面板分頁
+ *   apply(action),         // 自訂的操作入口（無限模式用 applyEndless）。沒給就用 applyAction
+ *   title,                 // 可以是函式（無限模式的日期每天會變）
  *   onTick(state),         // 每個 tick 之後
  *   overlayDraw(ctx, scene), onPick(grid, scene) // 建造模式用
  * }
@@ -63,9 +65,11 @@ export function createShopScene(app, opts) {
     toast(t(key).startsWith('⟦') ? t('err.unknown') : t(key), 2200);
   }
 
+  const apply = (action) => (opts.apply ? opts.apply(action) : applyAction(state, action));
+
   /** 送出一個操作。quiet = true 時失敗不顯示提示（呼叫的人自己處理）。 */
   function act(action, quiet = false) {
-    const r = applyAction(state, action);
+    const r = apply(action);
     if (!r.ok && !quiet) fail(r.reason);
     if (r.ok) {
       if (action.type === 'kufu') kufuFx();
@@ -94,6 +98,7 @@ export function createShopScene(app, opts) {
     onSuggest: () => { flags.filled = true; },
     onBought: (n, cost) => { app.sfx('cash'); toast(t('feed.bought', { qty: n, cost: cost.toLocaleString('en-US') }), 1800); },
     extraTabs: opts.extraTabs,
+    bars: opts.bars,
     structKey: opts.structKey,
   };
   const tabSeen = {};
@@ -295,7 +300,7 @@ export function createShopScene(app, opts) {
 
   // ---- 一個 tick ----
   function tickOnce() {
-    if (bot) for (const a of botActions(state, bot)) applyAction(state, a);
+    if (bot) for (const a of botActions(state, bot)) apply(a);
     stepShop(state);
     if (opts.onTick) opts.onTick(state, scene);
   }
@@ -344,7 +349,7 @@ export function createShopScene(app, opts) {
     update(dt) {
       time += dt;
       if (viewDirty) { layoutView(); if (!scene.centered) { centerOnShop(); scene.centered = true; } }
-      if (bot && state.phase === 'prep') for (const a of botActions(state, bot)) applyAction(state, a);
+      if (bot && state.phase === 'prep') for (const a of botActions(state, bot)) apply(a);
       if (state.phase === 'open' && speed > 0) {
         alpha = stepper.advance(dt * speed * (app.params.speed || 1), tickOnce);
         soundFromState();
@@ -424,7 +429,14 @@ export function createShopScene(app, opts) {
         panel.update();
         return summary(state);
       },
-      act: (a) => applyAction(state, a),
+      act: (a) => { const r = apply(a); panel.update(); hud.update(); return r; },
+      /** 某一格的中心在視窗上的位置（CSS 像素）。測試用。 */
+      cellScreen: (gx, gy) => {
+        const w = gridToWorld(gx + 0.5, gy + 0.5);
+        const p = worldToScreen(cam, w.x, w.y);
+        const rect = app.canvas.getBoundingClientRect();
+        return { x: rect.left + p.x * app.stageScale, y: rect.top + p.y * app.stageScale };
+      },
       useBot: (name) => { bot = name; return true; },
       mini: () => null,
       hintIndex: () => (hints ? hints.index() : -1),

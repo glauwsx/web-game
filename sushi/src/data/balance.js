@@ -225,4 +225,48 @@ export const BOT = {
   RACE_LEVEL: 4,
   RESTOCK_BELOW: 12,      // 庫存低於幾單位就補貨
   RESTOCK_QTY: 20,
+  ENDLESS_RESERVE: 80000, // 無限模式：手上至少留這麼多錢才蓋東西
+};
+
+// ---- 無限模式（計劃書第 12 節） ----
+export const TOKKEI_ARRIVAL_MULT = 0.7;    // 特殊刑事在場時的來客倍率
+export const SHIRATORI_FAIL_REP = -5;      // 白鳥麗次沒吃滿 20 貫
+export const ENDLESS = {
+  START_MONEY: 300000,
+  START_REP: 30,
+  START_MENU: ['tamago', 'kappa', 'ika', 'sake', 'ebi', 'maguro'],
+  // 店面大小：價格、需要的評價、baseArrival
+  SIZES: [
+    { w: 8, h: 8, price: 0, rep: 0, arrival: 0.08 },
+    { w: 10, h: 10, price: 100000, rep: 30, arrival: 0.10 },
+    { w: 12, h: 12, price: 250000, rep: 45, arrival: 0.12 },
+    { w: 16, h: 12, price: 600000, rep: 60, arrival: 0.15 },
+    { w: 20, h: 16, price: 1500000, rep: 75, arrival: 0.18 },
+  ],
+  MIX: { normal: 5, salaryman: 3, family: 1, tourist: 1, pachinkoFan: 2, raceFan: 2 },
+  GOURMET_REP: 50,          // 評價到這裡之後美食家才出現
+  GOURMET_WEIGHT: 1.5,
+  RENT_BASE: 5000,
+  RENT_PER_CELL: 50,
+  WEEKEND_MULT: 1.3,
+  SPOIL: 0.5,               // 打烊時剩下的食材損失多少（無條件捨去）
+  PRICE_SWING: 0.2,         // 每日魚價浮動
+  EVENT_CHANCE: 0.25,
+  SELL_REFUND: 0.5,
+  INSP_PER: 30,             // 幾位滿意的顧客換 1 點靈感（計劃書起始值 10，研發太快，調慢）
+  LOAN_MAX: 500000,
+  LOAN_STEP: 50000,
+  LOAN_INTEREST: 0.05,      // 每週
+  BANKRUPT_MONEY: -100000,
+  BANKRUPT_DAYS: 3,
+  BAILOUT_MONEY: 100000,
+  BAILOUT_REP: -20,
+  RIVAL_MONTH: 3000000,     // 計劃書起始值 800,000。兩位師傅的店一個月大約 4,000,000，所以調高
+  RIVAL_GROWTH: 1.08,
+  RIVAL_BONUS: 0.05,
+  RIVAL_REP: 3,
+  HIRE_REP: { honda: 0, terai: 0, matoi: 50, reiko: 60, nakagawa: 80 },
+  BOSS_AFTER_DAYS: 7,       // 擁有機台幾天後強敵開始出現
+  BOSS_CHANCE: { bucho: 0.12, pro: 0.2, shumaha: 0.15, lemon: 0.1 },
+  LEMON_REP: 40,
 };

@@ -12,6 +12,8 @@ import { createDemoScene } from './modes/demo.js';
 import { createAudio } from './core/audio.js';
 import { SAVE_KEYS } from './core/save.js';
 import { createLevelSelectScene, startLevel } from './modes/owner-level.js';
+import { createEndlessMenuScene, startEndless, loadEndless, endlessSettings } from './modes/owner-endless.js';
+import { createEndless } from './sim/endless.js';
 import { createRaceScene } from './mini/race/game.js';
 import { TRACKS } from './data/tracks.js';
 import { createPachinkoScene } from './mini/pachinko/game.js';
@@ -141,6 +143,15 @@ app.routes.level = (a, arg) => {
   scenes.reset(createLevelSelectScene(a));
   return startLevel(a, Number(arg) || 1) ? true : null;
 };
+
+// 無限模式。?scene=endless 進選單；?scene=endless:new 直接開新遊戲；?scene=endless:continue 直接讀檔
+app.routes.endless = (a, arg) => {
+  scenes.reset(createEndlessMenuScene(a));
+  if (arg === 'new') startEndless(a, createEndless(a.params.seed ?? 1));
+  else if (arg === 'continue') { const saved = loadEndless(a); if (saved) startEndless(a, saved); }
+  return true;
+};
+app.settingsExtra = [endlessSettings];
 
 // ?scene=race 或 ?scene=race:賽道id：直接開一場賽車（自由遊玩）
 app.routes.race = (a, arg) => createRaceScene(a, { track: TRACKS[arg] ? arg : 'itamae', level: 3 });

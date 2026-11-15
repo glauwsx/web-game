@@ -8,6 +8,10 @@ import { freeStation } from './staff.js';
 import { stockCap, totalStock, unitCost, suggestPurchases } from './economy.js';
 import { buchoAround, lemonExpected } from './bosses.js';
 import { machineOf, bossesNeedingChoice } from './machines.js';
+import { FURNITURE } from '../data/furniture.js';
+import { RESEARCH } from '../data/events.js';
+import { canPlace, rectDistance } from './pathfind.js';
+import { applyEndless, endDay, researchStatus, buildable } from './endless.js';
 
 /** good：準備階段的設定。 */
 function goodPrep(state) {
@@ -112,4 +116,82 @@ export function runDay(cfg, name = 'naive', maxTicks = 100000) {
   const state = createShopState(cfg);
   for (let i = 0; i < maxTicks && state.phase !== 'closed'; i++) botStep(state, name);
   return state;
+}
+
+// ---- 無限模式的自動玩家（60 天測試用） ----
+
+const RESEARCH_ORDER = ['inari', 'anago', 'ikura', 'pachinko', 'chutoro', 'uni', 'otoro', 'raceCab', 'board2', 'track2', 'uniformSign', 'track3', 'disguise'];
+
+/** 找一個可以擺的位置。near = true 時選離板前檯最近的。 */
+function findPlace(s, type, near) {
+  let best = null;
+  let bestScore = Infinity;
+  const stations = s.shop.furniture.filter((f) => f.type === 'chefStation');
+  const def = FURNITURE[type];
+  for (let y = 0; y < s.shop.h; y++) {
+    for (let x = 0; x < s.shop.w; x++) {
+      if (!canPlace(s.shop, type, x, y).ok) continue;
+      let score;
+      if (near) {
+        score = Math.min(...stations.map((st) => rectDistance(st.x, st.y, 2, 1, x, y, def.w, def.h))) * 100 + y * 10 + x;
+      } else {
+        // 其他東西盡量靠右邊和後面，不要擋在入口附近
+        score = Math.abs(x - s.shop.door.gx) < 2 ? 5000 + y : (s.shop.w - x) * 10 + y;
+      }
+      if (score < bestScore) { bestScore = score; best = { x, y }; }
+    }
+  }
+  return best;
+}
+
+/** 準備階段要做的一件事（研發、雇人、擺設、擴建）。沒有事做回傳空陣列。 */
+export function endlessPrepActions(E) {
+  const s = E.s;
+  if (s.phase !== 'prep') return [];
+  const acts = [];
+  for (const id of RESEARCH_ORDER) {
+    const item = RESEARCH.find((r) => r.id === id);
+    const st = researchStatus(E, item);
+    if (st === 'ok') return [{ type: 'research', id }];
+    if (st !== 'done' && st !== 'needs') break;
+  }
+  const own = (type) => s.shop.furniture.filter((f) => f.type === type).length;
+  const hired = (id) => s.staff.some((x) => x.id === id);
+  const spare = s.money - B.BOT.ENDLESS_RESERVE;
+  const build = (type, near) => {
+    if (!buildable(E).includes(type) || FURNITURE[type].price > spare) return false;
+    const p = findPlace(s, type, near);
+    if (!p) return false;
+    acts.push({ type: 'place', furniture: type, x: p.x, y: p.y });
+    return true;
+  };
+  const steps = [
+    () => own('counterSeat') < 8 && build('counterSeat', true),
+    () => !hired('honda') && spare > 0 && acts.push({ type: 'hire', staff: 'honda' }),
+    () => own('tableSet') < 1 && build('tableSet', false),
+    () => own('chefStation') < 2 && build('chefStation', true),
+    () => own('chefStation') >= 2 && !hired('terai') && spare > 0 && acts.push({ type: 'hire', staff: 'terai' }),
+    () => own('counterSeat') < 10 && build('counterSeat', true),
+    () => own('fridge') < 1 && build('fridge', false),
+    () => own('pachinko') < 2 && build('pachinko', false),
+    () => own('raceCab') < 1 && build('raceCab', false),
+    () => own('lantern') < 2 && build('lantern', false),
+  ];
+  for (const step of steps) { if (step()) return acts; }
+  const next = B.ENDLESS.SIZES[E.size + 1];
+  if (next && s.reputation >= next.rep && s.money >= next.price + B.BOT.ENDLESS_RESERVE * 2) return [{ type: 'expand' }];
+  return acts;
+}
+
+/** 用自動玩家跑完無限模式的一天。回傳當天的結算。 */
+export function runEndlessDay(E) {
+  for (let i = 0; i < 12; i++) {
+    const acts = endlessPrepActions(E);
+    if (!acts.length) break;
+    let any = false;
+    for (const a of acts) if (applyEndless(E, a).ok) any = true;
+    if (!any) break;
+  }
+  for (let i = 0; i < 100000 && E.s.phase !== 'closed'; i++) botStep(E.s, 'good');
+  return endDay(E);
 }

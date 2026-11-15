@@ -1,7 +1,7 @@
 // 強敵與事件。純邏輯。
 // 事件時間表在 state.events：[{ kind, at（一天裡的分鐘）, fired }]。
 import * as B from '../data/balance.js';
-import { STAFF } from '../data/characters.js';
+import { STAFF, CUSTOMER_TYPES } from '../data/characters.js';
 import { rngInt } from '../core/rng.js';
 import { getLayout } from './pathfind.js';
 import { minuteOfDay, pushFeed, addPenalty, addReputation, addKufu } from './economy.js';
@@ -83,6 +83,24 @@ function stepLemon(state) {
   }
 }
 
+// 無限模式的事件客人
+SPAWNERS.group = (state, e) => {
+  for (let i = 0; i < (e.count || 1); i++) spawnParty(state, e.type, { party: 1, delay: i * B.PARTY_SPAWN_GAP * 2 });
+  if (e.feed) pushFeed(state, e.feed, null);
+};
+
+/** 白鳥麗次：點 20 貫最貴的。庫存不夠（沒吃滿就走）評價下降。 */
+function stepGuests(state) {
+  for (const c of state.customers) {
+    if (c.type !== 'shiratori' || c.judged || c.st !== 'leave') continue;
+    c.judged = true;
+    if (c.eaten < CUSTOMER_TYPES.shiratori.appetite[0]) {
+      addReputation(state, B.SHIRATORI_FAIL_REP);
+      pushFeed(state, 'feed.shiratoriFail', null);
+    } else pushFeed(state, 'feed.shiratoriPass', null);
+  }
+}
+
 /** 註冊新的事件種類（其他模組用，例如職業玩家、修馬哈、檸檬）。 */
 export function registerEvent(kind, spawner) {
   SPAWNERS[kind] = spawner;
@@ -144,6 +162,7 @@ export function lemonExpected(state) {
 export function stepBosses(state) {
   stepBucho(state);
   stepLemon(state);
+  stepGuests(state);
   if (state.banner && state.banner.until <= state.tick) state.banner = null;
 }
 

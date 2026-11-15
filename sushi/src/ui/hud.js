@@ -39,7 +39,7 @@ export function createHud(env) {
   const top = h('div', { class: 'hud solid' },
     h('div', { class: 'hud-clock' },
       el.clock = h('span', { class: 'clock' }, ''),
-      el.title = h('span', { class: 'hud-title' }, env.title || '')),
+      el.title = h('span', { class: 'hud-title' }, typeof env.title === 'function' ? env.title() : env.title || '')),
     h('div', { class: 'hud-money', title: t('hud.money') }, el.money = h('span', null, '')),
     h('div', { class: 'hud-rep', title: t('hud.rep') },
       el.stars = h('span', { class: 'stars' }, h('span', { class: 'stars-bg' }, '★★★★★'), el.starsFill = h('span', { class: 'stars-fill' }, '★★★★★')),
@@ -98,16 +98,18 @@ export function createHud(env) {
     el.disguise.classList.toggle('on', !!ryo && ryo.disguised);
     const speed = env.getSpeed();
     for (const b of speedBtns) b.classList.toggle('active', Number(b.dataset.speed) === speed);
+    if (typeof env.title === 'function') { const tt = env.title(); if (el.title.textContent !== tt) el.title.textContent = tt; }
     // 下方長條
     const mine = s.day.revenue;
     const target = targetRevenue(s);
-    const rival = s.rival ? rivalNow(s) : target;
-    const max = Math.max(target * 1.2, mine * 1.05, 1);
+    const custom = env.bars ? env.bars() : null;
+    const rival = custom ? custom.rival : s.rival ? rivalNow(s) : target;
+    const max = Math.max(target * 1.2, rival * 1.2, mine * 1.05, 1);
     el.barMine.style.width = `${Math.max(0, mine / max) * 100}%`;
     el.barRival.style.width = `${(rival / max) * 100}%`;
     el.numMine.textContent = yen(mine);
     el.numRival.textContent = yen(rival);
-    el.rivalName.textContent = s.rival ? t('hud.rival') : t('hud.target');
+    el.rivalName.textContent = custom ? custom.name : s.rival ? t('hud.rival') : t('hud.target');
     el.barMine.classList.toggle('ahead', mine >= rival);
     const inShop = s.customers.filter((c) => ['toSeat', 'decide', 'wait', 'eat', 'play', 'prize'].includes(c.st)).length;
     el.cust.textContent = t('hud.customers', { n: inShop, q: s.queue.length });

@@ -109,6 +109,16 @@ export const CUSTOMER_LOOKS = {
     { build: 'stocky', skin: 's', hair: { style: 'short', color: 'g' }, face: { mustache: 'hachi', mustacheColor: 'g' }, top: { style: 'suit', color: 'b', tie: 'e' }, bottom: { style: 'pants', color: 'a' }, shoes: { color: 'k' }, hat: { style: 'beret', color: 'm' }, acc: ['scarf'] },
     { build: 'adult', skin: 's', hair: { style: 'bob', color: 'h' }, face: { glasses: 'glasses' }, top: { style: 'tshirt', color: 'k', sleeve: 'long', neck: false, scarf: 'e' }, bottom: { style: 'pants', color: 'k' }, shoes: { color: 'k' }, hat: { style: 'beret', color: 'v' }, acc: ['scarf'] },
   ],
+  // 特殊刑事：奇裝異服
+  tokkei: [
+    { build: 'stocky', skin: 's', hair: { style: 'curly', color: 'p' }, face: { glasses: 'shades' }, top: { style: 'aloha', color: 'p', color2: 'y', sleeve: 'short' }, bottom: { style: 'shorts', color: 'y' }, shoes: { color: 'r' } },
+    { build: 'tall', skin: 's', hair: { style: 'none' }, face: { mouth: false }, top: { style: 'kimono', color: 'P', color2: 'w', obi: 'y' }, bottom: { style: 'kimono', color: 'P' }, shoes: { color: 'w' }, hat: { style: 'helmet', color: 'y' } },
+    { build: 'adult', skin: 's', hair: { style: 'spiky', color: 'y' }, top: { style: 'stripe', color: 'r', color2: 'y', sleeve: 'long' }, bottom: { style: 'skirt', color: 'i' }, shoes: { color: 'k' }, hat: { style: 'sunhat', color: 'p' } },
+  ],
+  // 白鳥麗次：白西裝
+  shiratori: [
+    { build: 'tall', skin: 's', hair: { style: 'sidepart', color: 'h' }, face: { glasses: 'shades' }, top: { style: 'suit', color: 'w', tie: 'r' }, bottom: { style: 'pants', color: 'w' }, shoes: { color: 'w' } },
+  ],
   pachinkoFan: [
     { build: 'adult', skin: 's', hair: { style: 'curly', color: 'k' }, top: { style: 'jacket', color: 'n', color2: 'w' }, bottom: { style: 'pants', color: 'K' }, shoes: { color: 'k' } },
     { build: 'stocky', skin: 's', hair: { style: 'short', color: 'h' }, top: { style: 'stripe', color: 'e', color2: 'k', sleeve: 'short' }, bottom: { style: 'pants', color: 'b' }, shoes: { color: 'k' }, hat: { style: 'cap', color: 'k' } },
@@ -154,6 +164,9 @@ export const CUSTOMER_TYPES = {
   raceFan:     { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'race', plays: [1, 2] },
   // 檸檬：試吃 3 個品項，偏好高等級，不在意價格
   lemon:       { appetite: [3, 3], budget: [20000, 20000], sens: 0, patience: 30, tierPref: [0.6, 0.9, 1.25, 1.5], party: 1, special: true },
+  // 無限模式的事件客人：特殊刑事（消費很高）、白鳥麗次（點 20 貫最貴的）
+  tokkei:      { appetite: [7, 10], budget: [8000, 12000], sens: 0.3, patience: 20, tierPref: [0.8, 1.0, 1.2, 1.3], party: 1, special: true },
+  shiratori:   { appetite: [20, 20], budget: [99000, 99000], sens: 0, patience: 30, tierPref: [0.1, 0.3, 1.0, 3.0], party: 1, special: true },
   // 強敵：只玩機台，不點餐。預算要夠玩完全部場次
   pro:         { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },
   shumaha:     { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },
