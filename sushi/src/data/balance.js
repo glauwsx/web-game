@@ -134,3 +134,46 @@ export const PACHINKO = {
   WOM_INIT: 0.6,
   WOM_MAX: 1.2,
 };
+
+// ---- 賽車 ----
+export const RACE = {
+  DT: 1 / 60,               // 物理步長（秒）
+  SEG_LEN: 200,             // 一個路段的長度
+  MAX_SPEED: 12000,         // 最高速度 = 路段長度 / 步長
+  ACCEL: 12000 / 5,
+  BRAKE: -12000,
+  DECEL: -12000 / 5,        // 自然減速
+  OFFROAD_DECEL: -12000 / 2,
+  OFFROAD_LIMIT: 12000 / 4, // 出界時的速度上限
+  STEER: 2,                 // 轉向：dx = dt × 2 × (速度 / 最高速度)
+  CENTRIFUGAL: 0.3,
+  X_MAX: 2,                 // 橫向位置的極限（±1 是路面邊緣）
+  LAPS: 3,
+  CARS: 6,
+  CAR_W: 0.3,               // 車寬（路面半寬 = 1）
+  CAR_LEN: 260,             // 車長
+  HIT_SLOW: 0.8,            // 撞到前車：速度降到前車的 0.8 倍
+  OBJECT_SPEED: 12000 / 5,  // 撞到路邊景物後的速度
+  BOOSTS: 3,
+  BOOST_T: 2,
+  BOOST_MULT: 1.25,
+  PAD_T: 1,                 // 山葵加速板的免費噴射時間
+  PUDDLE_T: 0.8,            // 醬油水灘的打滑時間
+  ITEM_W: 0.28,             // 水灘和加速板的半寬
+  INTEGRITY_HIT: 10,
+  INTEGRITY_OFFROAD: 5,     // 出界每秒扣多少
+  SHOP_RATIO: [0.80, 0.86, 0.91, 0.95, 0.98], // 壽司車等級 1 到 5 的最高速度比例
+  SHOP_SPREAD: 0.004,       // 同一場裡各台壽司車的速度差
+  CURVE_SLOW: 0.02,         // 對手車過彎最多減速多少
+  SHUMAHA_RATIO: 1.0,
+  GRID_GAP: 300,            // 起跑時前後車的間隔
+  FEE: 800,
+  FEE_MIN: 500,
+  FEE_MAX: 1500,
+  // AI 顧客的名次公式
+  THETA: [0.30, 0.45, 0.58, 0.70, 0.82],
+  AI_NOISE: 0.07,
+  AI_SKILL: { normal: [0.2, 0.6], raceFan: [0.45, 0.8], shumaha: [0.99, 0.99] },
+  RACE_MIN: 4,              // 一場比賽佔用賽道幾遊戲分鐘
+  SIGNUP_MIN: 1,            // 第一位報名後等幾分鐘開賽
+};
