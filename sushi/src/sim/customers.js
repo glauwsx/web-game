@@ -3,6 +3,7 @@
 //   'arrive' 從街上走到入口    'queue' 排隊            'toSeat' 走到座位
 //   'decide' 看菜單            'wait' 等餐             'eat' 吃
 //   'leave' 離開
+//   'play' 玩機台             'prize' 在機台前吃獎品（這兩個由 sim/machines.js 處理）
 import * as B from '../data/balance.js';
 import { SUSHI } from '../data/sushi.js';
 import { FURNITURE } from '../data/furniture.js';
@@ -18,6 +19,28 @@ const STREET_Y = 1.0;   // 人行道離店面前緣幾格
 const SPAWN_DIST = 9;   // 從入口左右幾格遠的地方出現
 
 function doorX(state) { return state.shop.door.gx + 0.5; }
+
+/**
+ * 機台模組（sim/machines.js）掛進來的處理。顧客的 goal 不是 'eat' 時使用。
+ *   chooseGoal(state, c)        建立顧客時決定要不要玩機台
+ *   findSpot(state, layout, c)  找一台空的機台 → { furn, slot } 或 null
+ *   canWait(c)                  找不到機台時要不要排隊（不排隊就改成吃飯）
+ *   arrive(state, layout, c)    走到機台了
+ *   step(state, layout, c)      'play'、'prize' 狀態的每個 tick
+ */
+export const machineHooks = { chooseGoal: null, findSpot: null, canWait: null, arrive: null, step: null };
+
+/** 這位顧客要找的位置：機台或座位。回傳 [{ furn, slot }] 或 null。 */
+function findSpots(state, layout, c, party) {
+  if (c.goal !== 'eat' && machineHooks.findSpot) {
+    const spot = machineHooks.findSpot(state, layout, c);
+    if (spot) return [spot];
+    if (machineHooks.canWait(c)) return null;
+    c.goal = 'eat'; // 機台都有人在玩：改成吃飯
+  }
+  const def = CUSTOMER_TYPES[c.type] || {};
+  return findSeats(state, layout, party.length, !!def.prefersTable);
+}
 
 /** 建立一位顧客（還沒放進 state.customers）。 */
 export function createCustomer(state, type, opts = {}) {
@@ -47,7 +70,9 @@ export function createCustomer(state, type, opts = {}) {
     furn: 0, slot: -1, order: 0, timer: 0, waited: 0, queued: 0,
     thought: null, settled: false,
     goal: opts.goal || 'eat', plays: opts.plays || 0, prizes: [], boss: opts.boss || null,
+    prizePending: 0, prizeGot: 0, mtimer: 0,
   };
+  if (!opts.goal && !opts.leader && machineHooks.chooseGoal) machineHooks.chooseGoal(state, c);
   c.pgx = c.gx; c.pgy = c.gy;
   c.path = [[doorX(state), state.shop.h + STREET_Y], [doorX(state), state.shop.h + 0.45]];
   return c;
@@ -147,9 +172,8 @@ function partyOf(state, leader) {
 
 /** 組長到了入口：找座位。找不到就排隊，隊伍滿了就離開。 */
 function onLeaderAtDoor(state, layout, c) {
-  const def = CUSTOMER_TYPES[c.type] || {};
   const party = partyOf(state, c);
-  const seats = findSeats(state, layout, party.length, !!def.prefersTable);
+  const seats = findSpots(state, layout, c, party);
   if (seats) {
     party.forEach((m, i) => assignSeat(state, layout, m, seats[i]));
     walkToSeat(state, layout, c);
@@ -176,9 +200,8 @@ export function seatQueue(state) {
   for (const id of state.queue) {
     const c = findCustomer(state, id);
     if (!c || c.st !== 'queue') continue;
-    const def = CUSTOMER_TYPES[c.type] || {};
     const party = partyOf(state, c);
-    const seats = findSeats(state, layout, party.length, !!def.prefersTable);
+    const seats = findSpots(state, layout, c, party);
     if (!seats) { rest.push(id); continue; }
     party.forEach((m, i) => {
       assignSeat(state, layout, m, seats[i]);
@@ -309,6 +332,7 @@ function stepOne(state, layout, c) {
     }
     case 'toSeat': {
       if (!advance(c, B.CUSTOMER_SPEED)) return;
+      if (c.goal !== 'eat' && machineHooks.arrive) { machineHooks.arrive(state, layout, c); return; }
       c.st = 'decide';
       c.timer = B.DECIDE_TICKS;
       return;
@@ -354,6 +378,10 @@ function stepOne(state, layout, c) {
       if (advance(c, B.CUSTOMER_SPEED)) c.st = 'gone';
       return;
     }
+    case 'play':
+    case 'prize':
+      if (machineHooks.step) machineHooks.step(state, layout, c);
+      return;
     default:
   }
 }

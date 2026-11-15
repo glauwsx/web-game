@@ -26,6 +26,8 @@ export const furnitureInfo = {};
 export const furnitureDraw = {};
 /** 其他模組可以替某種顧客狀態決定畫法。fn(c, f, slot) 回傳要覆蓋的欄位。 */
 export const customerPose = {};
+/** 其他模組可以每 200 毫秒看一次經營畫面的狀態（例如強敵來了要跳選單）。fn(scene, app)。 */
+export const shopWatchers = [];
 
 /**
  * opts = {
@@ -77,6 +79,7 @@ export function createShopScene(app, opts) {
   }
 
   const env = {
+    app,
     title: opts.title,
     getState: () => state,
     act,
@@ -199,7 +202,8 @@ export function createShopScene(app, opts) {
         it.back = face.back; it.flip = face.flip;
         it.z = slot.z;
         it.depth = furnitureDepth(f.x, f.y, def.w, def.h) + 0.005 + c.slot * 0.0001;
-        if (slot.pose === 'stand') it.depth = undefined;
+        // 站在賽道前面的人：至少要畫在賽道後面（賽道很寬，用格子座標算的深度會比賽道小）
+        if (slot.pose === 'stand') it.depth = Math.max(it.depth, gx + gy);
         if (c.thought && c.thought.until > state.tick && (c.thought.key === 'yummy' || c.thought.key === 'win') && c.st === 'eat') it.pose = it.pose === 'sit' ? 'sit' : 'happy';
         if (customerPose[c.st]) Object.assign(it, customerPose[c.st](c, f, slot, time) || {});
       } else if (c.st === 'queue') {
@@ -327,6 +331,7 @@ export function createShopScene(app, opts) {
       if (opts.tutorial || opts.hints) {
         const conditions = {
           tabBuy: () => panel.getTab() === 'buy',
+          tabFac: () => panel.getTab() === 'fac',
           filled: () => !!flags.filled || totalStock(state) >= 20,
           stocked: () => totalStock(state) >= 20,
           opened: () => state.phase !== 'prep',
@@ -353,6 +358,7 @@ export function createShopScene(app, opts) {
         panel.update();
         info.update();
         if (hints) hints.update();
+        for (const w of shopWatchers) w(scene, app);
       }
       if (state.phase === 'closed' && !closedFired) {
         closedFired = true;

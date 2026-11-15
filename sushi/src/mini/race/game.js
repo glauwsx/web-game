@@ -1,6 +1,6 @@
 // 賽車小遊戲的場景。
 // opts = { track, level, shumaha, stats, laps, auto（一開始就用自動駕駛）, onDone(result) }
-// result = { place, time, integrity, won（贏過的壽司 id）, prizes（拿到的壽司 id）, beatShumaha（對戰時有沒有贏修馬哈）}
+// result = { place, time, integrity, won（贏過的壽司 id）, prizes（拿到的壽司 id）, shumahaPlace（有修馬哈時他的名次，沒有是 0） }
 import { h } from '../../ui/dom.js';
 import { t } from '../../data/strings.js';
 import { RACE as R } from '../../data/balance.js';
@@ -68,15 +68,22 @@ export function createRaceScene(app, opts = {}) {
     const place = p.place || placeOf(race, p);
     const won = wonSushi(race);
     const sh = race.cars.find((c) => c.kind === 'shumaha');
-    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), won, prizes: prizesFor(won), beatShumaha: sh ? sh.place > place : null };
-    app.sfx(won.length ? 'win' : 'lose');
+    const shumahaPlace = sh ? sh.place || placeOf(race, sh) : 0;
+    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), won, prizes: prizesFor(won), shumahaPlace };
+    // 跟修馬哈比：只看有沒有跑在他前面
+    const vsShumaha = !!opts.shumaha && shumahaPlace > 0;
+    const beat = vsShumaha && place < shumahaPlace;
+    app.sfx((vsShumaha ? beat : won.length) ? 'win' : 'lose');
     el.result.classList.remove('hidden');
     el.result.replaceChildren(
       h('h1', { class: 'menu-title' }, t('race.finish')),
       h('div', { class: 'res-line big' }, h('span', null, t('race.result.place')), h('span', { dataset: { id: 'race-place' } }, t('race.place', { n: place }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.time')), h('span', null, t('race.seconds', { n: result.time.toFixed(1) }))),
       h('div', { class: 'res-line' }, h('span', null, t('race.result.integrity')), h('span', null, `${result.integrity}%`)),
-      h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', { dataset: { id: 'race-prize' } }, (won.length ? '' : t('race.consolation')) + result.prizes.map((id) => t(`sushi.${id}`)).join('、'))),
+      vsShumaha
+        ? h('div', { class: 'res-line' }, h('span', null, t('race.result.shumaha')), h('span', null, t('race.place', { n: shumahaPlace })))
+        : h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', { dataset: { id: 'race-prize' } }, (won.length ? '' : t('race.consolation')) + result.prizes.map((id) => t(`sushi.${id}`)).join('、'))),
+      vsShumaha ? h('div', { class: `pk-verdict ${beat ? 'win' : 'lose'}`, dataset: { id: 'race-verdict' } }, t(beat ? 'race.result.beat' : 'race.result.lost')) : '',
       h('div', { class: 'menu-foot' },
         opts.onDone ? null : h('button', { class: 'btn plain', dataset: { id: 'race-again' }, onclick: () => app.scenes.replace(createRaceScene(app, opts)) }, t('race.again')),
         h('button', { class: 'btn red', dataset: { id: 'race-done' }, onclick: () => { app.scenes.pop(); if (opts.onDone) opts.onDone(result); } }, t('common.ok'))));

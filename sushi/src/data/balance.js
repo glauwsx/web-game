@@ -96,6 +96,35 @@ export const RIVAL_NOISE = 0.03;
 export const PACHINKO_ATTRACTION = 0.04;
 export const RACE_ATTRACTION = 0.12;
 
+// ---- 機台的顧客 ----
+// 一般客進門時有這個機率考慮去玩機台（再乘上「玩的機率」）。計劃書沒有寫比例，自己定的。
+export const MACHINE_CURIOUS = { normal: 0.15, tourist: 0.1 };
+// 玩的機率 = clamp(1.2 − 入場費 / 除數, 0.1, 1) × (0.5 + 口碑)
+export const PLAY_CHANCE_BASE = 1.2;
+export const PLAY_CHANCE_MIN = 0.1;
+export const PLAY_CHANCE_WOM = 0.5;
+export const PLAY_CHANCE_DIV = { pachinko: 1000, race: 2000 };
+export const FEE_STEP = 100;                // 入場費一次調多少
+
+// ---- 職業玩家（小鋼珠） ----
+export const PRO = {
+  PLAYS: 12,              // 連續玩幾次
+  TIGHTEN_PLAYS: 2,       // 調緊之後再玩幾次就離開
+  TIGHTEN_WOM: 4,         // 調緊時口碑記錄塞進幾筆 0（口碑下降）
+  WIN_PAY: 5000,          // 親自應戰贏了，職業玩家付的錢
+  WIN_REP: 2,
+  LOSE_MULT: 2,           // 親自應戰輸了，職業玩家拿走幾倍獎品
+};
+
+// ---- 修馬哈（賽車） ----
+export const SHUMAHA = {
+  RACES: 8,
+  RAISE_RACES: 2,         // 調高壽司車等級之後再跑幾場就離開
+  WIN_PAY: 10000,
+  WIN_REP: 3,
+  LOSE_MULT: 2,           // 親自應戰輸了，全部壽司車那幾款各拿走幾貫
+};
+
 // ---- 部長 ----
 export const BUCHO_NOTICE_MIN = 5;         // 沒變裝幾分鐘後被認出來
 export const BUCHO_FINE = 10000;
@@ -177,4 +206,5 @@ export const RACE = {
   AI_NOISE: 0.02,
   AI_SKILL: { normal: [0.72, 0.94], raceFan: [0.80, 0.96], shumaha: [1.04, 1.04] },
   RACE_MIN: 4,              // 一場比賽佔用機台幾遊戲分鐘
+  SIGNUP_MIN: 1,            // 第一位報名後等幾分鐘開賽（機台改成一台一人之後就不需要了，見計劃書階段 5 的清單）
 };

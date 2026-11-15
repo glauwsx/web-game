@@ -4,6 +4,7 @@ import { t } from '../data/strings.js';
 import { SAVE_KEYS } from '../core/save.js';
 import { LEVEL_COUNT, getLevel, levelConfig } from '../data/levels.js';
 import { createShopScene } from './shop-scene.js';
+import './machines-ui.js';
 import { createDialogScene } from '../ui/dialog.js';
 import { createResultsScene } from '../ui/results.js';
 import { drawBackdrop } from '../ui/menus.js';

@@ -423,3 +423,61 @@ button {
 @media (pointer: coarse) { .race-pad { display: flex; } .race-hint { display: none; } }
 .race-result { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 44%; text-align: left; }
 .race-result .menu-title { text-align: center; }
+
+/* ---- 小鋼珠 ---- */
+.pk-left {
+  position: absolute; left: 0.8%; top: 2%; width: 29.5%; bottom: 12%; padding: 0.5em 0.6em; font-size: 0.82em;
+  display: flex; flex-direction: column; gap: 0.25em; overflow: hidden;
+}
+.pk-title { font-weight: 900; font-size: 1.1em; }
+.pk-title small { font-weight: 400; color: var(--ink-soft); }
+.pk-head { font-weight: 700; color: var(--red-dark); border-bottom: 1px dashed var(--washi-dark); }
+.pk-prize { display: flex; align-items: center; gap: 0.35em; }
+.pk-prize .px-icon { width: 1.8em; height: auto; }
+.pk-prize-name { flex: 1; }
+.pk-prize-n { font-weight: 700; }
+.pk-total { margin-top: auto; font-weight: 700; }
+.pk-total .num { font-size: 1.2em; color: var(--red-dark); }
+.pk-target { font-weight: 700; color: var(--indigo); }
+.pk-bar { height: 0.6em; background: var(--washi-dark); border-radius: 0.3em; overflow: hidden; }
+.pk-bar-fill { height: 100%; width: 0; background: var(--gold); }
+.pk-bar-fill.beat { background: var(--green); }
+.pk-right {
+  position: absolute; left: 69.4%; right: 0.8%; top: 2%; bottom: 12%;
+  display: flex; flex-direction: column; gap: 0.3em; font-size: 0.82em;
+}
+.pk-top { flex: 1; padding: 0.4em 0.5em; display: flex; flex-direction: column; gap: 0.2em; }
+.pk-balls { font-weight: 700; }
+.pk-balls .num { font-size: 1.3em; color: var(--red-dark); }
+.pk-reels { display: flex; justify-content: center; gap: 0.3em; background: #17110c; border-radius: 0.4em; padding: 0.25em; position: relative; }
+.pk-reels .px-icon { width: 2.6em; height: auto; background: #f6ecd4; border-radius: 0.2em; }
+.pk-reels.held::after { content: attr(data-hold); position: absolute; right: 0.3em; top: 0.1em; color: #ffe08a; font-weight: 700; font-size: 0.8em; }
+.pk-reel-msg { text-align: center; min-height: 1.2em; font-weight: 700; }
+.pk-reel-msg.win { color: var(--red); }
+.pk-feedback { font-size: 0.92em; color: var(--indigo); min-height: 2.4em; }
+.pk-gauge { flex: 0 0 5.5em; }
+.pk-power { color: var(--washi); font-weight: 700; text-align: center; text-shadow: 0 1px 0 #000; }
+.pk-ctl { display: flex; gap: 0.3em; justify-content: center; }
+.pk-ctl .btn { flex: 1; padding-left: 0.2em; padding-right: 0.2em; }
+.pk-fire { flex: 2 !important; }
+.pk-btn.active { background: var(--gold); }
+.pk-hint { position: absolute; left: 0; right: 0; bottom: 0.4em; text-align: center; font-size: 0.72em; color: rgba(255, 244, 220, 0.85); text-shadow: 0 1px 0 #000; }
+.narrow .pk-hint { display: none; }
+@media (pointer: coarse) { .pk-hint { display: none; } .pk-btn { min-height: 40px; } }
+.narrow .pk-btn { min-height: 40px; }
+.narrow .pk-left, .narrow .pk-right { bottom: 2%; }
+.pk-result { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 46%; text-align: left; }
+.pk-result .menu-title { text-align: center; }
+.pk-verdict { text-align: center; font-weight: 900; font-size: 1.2em; margin-top: 0.4em; }
+.pk-verdict.win { color: var(--green); }
+.pk-verdict.lose { color: var(--red); }
+
+/* ---- 機台（設施分頁、強敵選單） ---- */
+.mach-row .row-main { width: 100%; }
+.mach-status.warn { color: var(--red); font-weight: 700; }
+.mach-ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3em 0.5em; margin-top: 0.25em; }
+.mach-label { font-size: 0.8em; color: var(--ink-soft); }
+.boss-body { display: flex; gap: 0.8em; align-items: flex-start; text-align: left; max-width: 34em; }
+.boss-body p { margin: 0 0 0.4em; }
+.boss-opts { margin: 0; padding-left: 1.1em; font-size: 0.88em; }
+.boss-opts li { margin-bottom: 0.25em; }

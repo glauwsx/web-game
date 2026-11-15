@@ -62,3 +62,46 @@ await runE2E('race', async ({ open, check, shot }) => {
   check((await phone.evaluate(() => window.__sushi.mini().speed)) > 1000, '按住油門鈕會加速');
   await shot(phone, 'p5-race-phone.png');
 });
+
+// 經營畫面：第 6 關的設施分頁和試玩、第 7 關的修馬哈對策選單和親自應戰
+await runE2E('race-shop', async ({ open, check, shot }) => {
+  const lv = await open(DESKTOP, '?debug=1&seed=2&scene=level:6&nointro=1&nohints=1&unlock=1');
+  await waitScene(lv, 'level');
+  await lv.click('[data-tab="fac"]');
+  const id = await lv.evaluate(() => window.__sushi.state().shop.furniture.find((f) => f.type === 'raceTrack').id);
+  await lv.click(`[data-id="level-${id}-plus"]`);
+  await lv.click(`[data-id="fee-${id}-minus"]`);
+  const f = await lv.evaluate((fid) => window.__sushi.state().shop.furniture.find((x) => x.id === fid), id);
+  check(f.level === 4 && f.fee === 700, `設施分頁可以調車速和入場費（等級 ${f.level}、¥${f.fee}）`);
+  await lv.click(`[data-id="trial-${id}"]`);
+  await waitScene(lv, 'race');
+  check((await lv.evaluate(() => window.__sushi.mini().track)) === 'itamae', '試玩跑的是這條賽道');
+  await lv.keyboard.press('Escape');
+  await waitScene(lv, 'level');
+  check(true, '試玩按 Esc 回到經營畫面');
+  // 開店後賽道上會有比賽
+  await lv.evaluate(() => { window.__sushi.act({ type: 'buySuggested' }); window.__sushi.act({ type: 'open' }); window.__sushi.step(8 * 120); });
+  const races = await lv.evaluate((fid) => window.__sushi.state().shop.furniture.find((x) => x.id === fid).races || 0, id);
+  check(races > 0, `開店 2 小時內賽道跑了 ${races} 場`);
+  await shot(lv, 'p5-shop.png');
+
+  const l7 = await open(DESKTOP, '?debug=1&seed=1&scene=level:7&nointro=1&nohints=1&unlock=1');
+  await waitScene(l7, 'level');
+  await l7.evaluate(() => { window.__sushi.act({ type: 'buySuggested' }); window.__sushi.act({ type: 'open' }); });
+  await l7.evaluate(() => window.__sushi.step(8 * 200));
+  await l7.waitForFunction(() => { if (window.__sushi.scene() === 'boss') return true; window.__sushi.step(16); return false; }, null, { timeout: 15000, polling: 50 });
+  check(true, '修馬哈報名時跳出對策選單');
+  await shot(l7, 'p5-shumaha.png');
+  await l7.click('[data-id="boss-challenge"]');
+  await waitScene(l7, 'race');
+  check((await l7.evaluate(() => window.__sushi.state().cars.some((c) => c.kind === 'shumaha'))), '親自應戰：比賽裡有修馬哈的車');
+  await l7.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.auto(true); d.step(60 * 200); });
+  await l7.waitForSelector('[data-id="race-verdict"]');
+  const res = await l7.evaluate(() => window.__sushi.mini().result);
+  check(res.shumahaPlace >= 1, `結果畫面顯示勝負（玩家第 ${res.place} 名，修馬哈第 ${res.shumahaPlace} 名）`);
+  await l7.click('[data-id="race-done"]');
+  await waitScene(l7, 'level');
+  const c = await l7.evaluate(() => window.__sushi.state().customers.find((x) => x.boss === 'shumaha'));
+  const ok = res.place < res.shumahaPlace ? (!c || c.st === 'leave') : (c && c.st === 'prize' && c.prizePending + c.prizeGot > 0);
+  check(ok, '應戰的結果有回到經營畫面（贏了他離開，輸了他拿走雙倍壽司）');
+});
