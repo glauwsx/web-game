@@ -152,6 +152,8 @@ export const CUSTOMER_TYPES = {
   pachinkoFan: { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'pachinko', plays: [1, 3] },
   bucho:       { appetite: [4, 6], budget: [3000, 5000], sens: 0.8, patience: 12, tierPref: [0.9, 1.0, 1.0, 0.9], party: 1, special: true },
   raceFan:     { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'race', plays: [1, 2] },
+  // 檸檬：試吃 3 個品項，偏好高等級，不在意價格
+  lemon:       { appetite: [3, 3], budget: [20000, 20000], sens: 0, patience: 30, tierPref: [0.6, 0.9, 1.25, 1.5], party: 1, special: true },
   // 強敵：只玩機台，不點餐。預算要夠玩完全部場次
   pro:         { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },
   shumaha:     { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },

@@ -90,7 +90,7 @@ export function floorHasRoom(state) {
 
 /**
  * 送餐規則（計劃書 7.9）。師傅做好壽司時決定怎麼送：
- * 1. 座位離板前檯的曼哈頓距離 ≤ 2：回傳 'hand'（直接遞）。
+ * 1. 座位離任何一座板前檯的曼哈頓距離 ≤ 2：回傳 'hand'（直接遞）。
  * 2. 外場員工接得下：回傳 'floor'。staff 是現在就能接的人；沒有的話 staff 是 null，壽司先放在檯面上等。
  * 3. 沒有外場員工，或外場員工忙不過來：回傳 'chef'（師傅自己送）。
  */
@@ -99,10 +99,13 @@ export function decideDelivery(state, order, chef) {
   const station = findFurniture(state, chef.station);
   const seat = c && findFurniture(state, c.furn);
   if (!c || !station || !seat) return { how: 'none' };
-  const sd = FURNITURE[station.type];
   const fd = FURNITURE[seat.type];
-  const dist = rectDistance(station.x, station.y, sd.w, sd.h, seat.x, seat.y, fd.w, fd.h);
-  if (dist <= B.HANDOVER_DIST) return { how: 'hand' };
+  // 座位離任何一座板前檯夠近就可以直接遞（板前檯並排時，師傅之間會互相傳）
+  for (const st of state.shop.furniture) {
+    if (st.type !== 'chefStation') continue;
+    const sd = FURNITURE[st.type];
+    if (rectDistance(st.x, st.y, sd.w, sd.h, seat.x, seat.y, fd.w, fd.h) <= B.HANDOVER_DIST) return { how: 'hand' };
+  }
   if (floorHasRoom(state)) return { how: 'floor', staff: availableFloorStaff(state) };
   return { how: 'chef' };
 }
@@ -149,6 +152,7 @@ export function servePiece(state, c, order, server) {
       c.sat += B.SAT_EXPOSED;
       addReputation(state, B.REP_EXPOSED);
       state.exposedCount++;
+      if (c.boss === 'lemon') c.exposedNow = true;
       setThought(state, c, def.swordfish ? 'swordfish' : 'fake');
       pushFeed(state, 'feed.exposed', { item });
     }

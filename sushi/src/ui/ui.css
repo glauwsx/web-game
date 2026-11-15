@@ -281,6 +281,8 @@ button {
   animation: blink 0.5s steps(2, jump-none) 6; z-index: 6; white-space: nowrap; pointer-events: none;
 }
 .banner.kind-caught { background: #2f4270; font-size: 1.5em; }
+.banner.kind-lemon { background: #c9a227; color: #2a1c0c; }
+.banner.kind-good { background: #4f9a3c; }
 
 .bubbles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2; }
 .bubble {

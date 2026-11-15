@@ -4,7 +4,7 @@ import * as B from '../data/balance.js';
 import { STAFF } from '../data/characters.js';
 import { rngInt } from '../core/rng.js';
 import { getLayout } from './pathfind.js';
-import { minuteOfDay, pushFeed, addPenalty } from './economy.js';
+import { minuteOfDay, pushFeed, addPenalty, addReputation, addKufu } from './economy.js';
 import { spawnParty, startLeaving } from './customers.js';
 import { removeStaffFor } from './staff.js';
 import { setThought } from './orders.js';
@@ -14,10 +14,15 @@ import { setThought } from './orders.js';
  * defs = [{ kind, at, jitter }]
  */
 export function scheduleEvents(defs, rng) {
-  return (defs || []).map((e) => {
+  const out = [];
+  for (const e of defs || []) {
     const j = e.jitter || 0;
-    return { ...e, at: e.at + (j ? rngInt(rng, -j, j) : 0), fired: false };
-  }).sort((a, b) => a.at - b.at);
+    const at = e.at + (j ? rngInt(rng, -j, j) : 0);
+    out.push({ ...e, at, fired: false });
+    // 檸檬來店前有預告
+    if (e.kind === 'lemon') out.push({ kind: 'lemonNotice', at: at - B.LEMON.NOTICE_MIN, fired: false });
+  }
+  return out.sort((a, b) => a.at - b.at);
 }
 
 const SPAWNERS = {
@@ -28,6 +33,55 @@ const SPAWNERS = {
     state.banner = { key: 'banner.bucho', until: state.tick + B.BANNER_MIN * B.TICKS_PER_MIN, kind: 'bucho' };
   },
 };
+
+const banner = (state, key, kind) => { state.banner = { key, until: state.tick + B.BANNER_MIN * B.TICKS_PER_MIN, kind }; };
+
+// 檸檬（計劃書 10.4）：預告 → 來店試吃 3 個品項 → 通過或被吃出來
+SPAWNERS.lemonNotice = (state) => {
+  state.flags.lemonComing = true;
+  pushFeed(state, 'feed.lemonNotice', null);
+  banner(state, 'banner.lemonNotice', 'lemon');
+};
+SPAWNERS.lemon = (state) => {
+  const c = spawnParty(state, 'lemon', { look: 'lemon', boss: 'lemon' });
+  c.tasted = [];
+  state.flags.lemonComing = true;
+  pushFeed(state, 'feed.lemonComing', null);
+  banner(state, 'banner.lemon', 'lemon');
+};
+
+/** 檸檬的試吃結果。 */
+function stepLemon(state) {
+  for (const c of state.customers) {
+    if (c.boss !== 'lemon' || c.lemonDone) continue;
+    if (c.exposedNow) {
+      // 被吃出來：當場公開。店內所有顧客滿意度下降，評價下降
+      c.lemonDone = true;
+      for (const o of state.customers) {
+        if (o !== c && ['toSeat', 'decide', 'wait', 'eat', 'play', 'prize'].includes(o.st)) o.sat += B.LEMON.FAIL_SAT;
+      }
+      addReputation(state, B.LEMON.FAIL_REP);
+      state.flags.lemonComing = false;
+      state.flags.lemonResult = 'fail';
+      state.flags.lemonTests = (state.flags.lemonTests || 0) + 1;
+      pushFeed(state, 'feed.lemonFail', null);
+      banner(state, 'banner.lemonFail', 'caught');
+      if (c.st !== 'leave') startLeaving(state, getLayout(state.shop), c, false);
+    } else if (c.eaten >= B.LEMON.TASTES || c.st === 'leave') {
+      c.lemonDone = true;
+      state.flags.lemonComing = false;
+      if (c.eaten === 0) continue; // 什麼都沒吃到就走了：不算
+      if (state.flags.lemonResult !== 'fail') state.flags.lemonResult = 'pass';
+      state.flags.lemonTests = (state.flags.lemonTests || 0) + 1;
+      state.flags.lemonPassed = (state.flags.lemonPassed || 0) + 1;
+      addReputation(state, B.LEMON.PASS_REP);
+      addKufu(state, B.KUFU_MAX);
+      pushFeed(state, 'feed.lemonPass', null);
+      banner(state, 'banner.lemonPass', 'good');
+      setThought(state, c, 'yummy', 4);
+    }
+  }
+}
 
 /** 註冊新的事件種類（其他模組用，例如職業玩家、修馬哈、檸檬）。 */
 export function registerEvent(kind, spawner) {
@@ -81,9 +135,15 @@ function stepBucho(state) {
   }
 }
 
+/** 檸檬快來了或正在店裡（預告之後、離開之前）。 */
+export function lemonExpected(state) {
+  return !!state.flags.lemonComing;
+}
+
 /** 每個 tick 呼叫一次。 */
 export function stepBosses(state) {
   stepBucho(state);
+  stepLemon(state);
   if (state.banner && state.banner.until <= state.tick) state.banner = null;
 }
 

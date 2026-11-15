@@ -226,6 +226,7 @@ export function chooseOrder(state, c) {
   for (const item of Object.keys(state.menu)) {
     const m = state.menu[item];
     if (!m.on) continue;
+    if (c.tasted && c.tasted.includes(item)) continue; // 檸檬每個品項只試吃一次
     const price = sellPrice(state, item);
     if (price > c.budget) continue;
     const coef = m.mode === 'cheapHonest' ? B.QUALITY_COEF.cheap : B.QUALITY_COEF.premium;
@@ -351,6 +352,7 @@ function stepOne(state, layout, c) {
         return;
       }
       const order = createOrder(state, c, pick.item, { price: pick.price });
+      if (c.tasted) c.tasted.push(pick.item);
       c.order = order.id;
       c.st = 'wait';
       c.waited = 0;

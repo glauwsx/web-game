@@ -7,7 +7,7 @@ import { STAFF } from '../data/characters.js';
 import { rngCreate } from '../core/rng.js';
 import { getLayout } from './pathfind.js';
 import {
-  buy, suggestPurchases, processDeliveries, pushFeed, unitCost, minuteOfDay,
+  buy, suggestPurchases, processDeliveries, pushFeed, unitCost, minuteOfDay, addPenalty,
 } from './economy.js';
 import { spawnArrivals, stepCustomers, seatQueue, closeOutCustomers } from './customers.js';
 import { stepStaff, setRole, placeStaff, freeStation, findStaff, kufuActive } from './staff.js';
@@ -42,6 +42,7 @@ function newDay() {
  *   baseArrival, mix: { 顧客類型: 權重 },
  *   goal: { kind: 'fixed' | 'rival', target },
  *   features: { cheap, disguise, uniform, sellPremium },
+ *   lemonPenalty,                          // 檸檬吃出魚目混珠時，當日營業額扣掉的比例（第 9 關是 0.3）
  *   events: [...]                           // 事件時間表（階段 3 之後）
  * }
  */
@@ -84,6 +85,7 @@ export function createShopState(cfg) {
     priceMult: 1,
     features: { cheap: false, disguise: false, uniform: false, sellPremium: false, ...(cfg.features || {}) },
     goal: cfg.goal ? { ...cfg.goal } : { kind: 'fixed', target: 0 },
+    lemonPenalty: cfg.lemonPenalty || 0,
     rival: null,
     day: newDay(),
     exposedCount: 0,
@@ -165,6 +167,10 @@ export function stepShop(state) {
 /** 打烊：還在店裡的顧客結帳，算薪水，算成績。 */
 export function closeShop(state) {
   closeOutCustomers(state);
+  // 檸檬吃出魚目混珠：當日營業額扣掉一部分（計劃書 11.2 第 9 關）
+  if (state.flags.lemonResult === 'fail' && state.lemonPenalty > 0 && state.day.revenue > 0) {
+    addPenalty(state, Math.round(state.day.revenue * state.lemonPenalty));
+  }
   let wages = 0;
   for (const s of state.staff) if (s.role !== 'off') wages += STAFF[s.id].wage;
   state.day.wages = wages;

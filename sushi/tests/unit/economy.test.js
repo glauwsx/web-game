@@ -8,6 +8,7 @@ import { createCustomer, chooseOrder } from '../../src/sim/customers.js';
 import { createOrder, servePiece, decideDelivery, cancelOrdersOf, findOrder } from '../../src/sim/orders.js';
 import { findStaff, stepStaff } from '../../src/sim/staff.js';
 import { sampleConfig } from './helpers.js';
+import * as B from '../../src/data/balance.js';
 
 /** 讓一位顧客直接坐到指定家具的位置上。 */
 function seat(state, c, furnIndex, slot = 0) {
@@ -104,7 +105,7 @@ test('economy：結帳、小費、評價、真工夫量表', () => {
   const rep3 = s.reputation;
   settleCustomer(s, c3, true);
   assert.equal(s.day.sales, 3300);
-  assert.ok(Math.abs(s.reputation - (rep3 - 0.5)) < 1e-9);
+  assert.ok(Math.abs(s.reputation - (rep3 + B.REP_ANGRY_LEAVE)) < 1e-9);
   assert.equal(s.day.angry, 1);
   // 排隊排到生氣離開：評價下降比較少
   const c4 = createCustomer(s, 'normal');
@@ -207,7 +208,7 @@ test('orders：送餐三條規則', () => {
   s = mk([{ id: 'ryo', role: 'chef' }, { id: 'honda', role: 'floor' }]);
   ryo = findStaff(s, 'ryo');
   far = seat(s, createCustomer(s, 'normal'), 5, 0);
-  for (let i = 0; i < 6; i++) { const x = createOrder(s, far, 'ika', { price: 200 }); x.st = 'ready'; x.orphan = true; }
+  for (let i = 0; i < B.FLOOR_BACKLOG; i++) { const x = createOrder(s, far, 'ika', { price: 200 }); x.st = 'ready'; x.orphan = true; }
   o = createOrder(s, far, 'ika', { price: 200 });
   assert.equal(decideDelivery(s, o, ryo).how, 'chef');
 });

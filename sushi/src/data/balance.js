@@ -53,7 +53,7 @@ export const SAT_EXPOSED = -40;
 export const REP_EXPOSED = -3;
 export const REP_LEAVE_BASE = 60;          // 評價變化 = (滿意度 − 60) / 200
 export const REP_LEAVE_DIV = 200;
-export const REP_ANGRY_LEAVE = -0.5;       // 等餐等到生氣離開
+export const REP_ANGRY_LEAVE = -0.3;       // 等餐等到生氣離開
 export const REP_QUEUE_LEAVE = -0.2;       // 排隊排到生氣離開
 export const REP_COUPON = -1;              // 獎品發不出來，只能給招待券
 export const TIP_SAT = 85;
@@ -72,8 +72,8 @@ export const KUFU_SKILL_ADD = 2;
 export const STAFF_SPEED = { slow: 0.12, normal: 0.18, fast: 0.28 };
 export const HANDOVER_DIST = 2;            // 座位離板前檯多近可以直接遞
 export const DISGUISE_SPEED_MULT = 0.7;
-export const TRAY_SIZE = 4;                // 外場員工一趟最多送幾貫
-export const FLOOR_BACKLOG = 6;            // 每位外場員工最多累積幾貫待送；超過就由師傅自己送
+export const TRAY_SIZE = 8;                // 外場員工一趟最多送幾貫
+export const FLOOR_BACKLOG = 12;            // 每位外場員工最多累積幾貫待送；超過就由師傅自己送
 
 // ---- 進貨與庫存 ----
 export const STOCK_BASE = 200;
@@ -123,6 +123,15 @@ export const SHUMAHA = {
   WIN_PAY: 10000,
   WIN_REP: 3,
   LOSE_MULT: 2,           // 親自應戰輸了，全部壽司車那幾款各拿走幾貫
+};
+
+// ---- 檸檬（計劃書 10.4） ----
+export const LEMON = {
+  TASTES: 3,              // 試吃幾個品項
+  NOTICE_MIN: 30,         // 來店前幾分鐘預告
+  FAIL_SAT: -20,          // 被吃出來：店內所有顧客的滿意度
+  FAIL_REP: -10,
+  PASS_REP: 5,
 };
 
 // ---- 部長 ----
@@ -207,4 +216,14 @@ export const RACE = {
   AI_SKILL: { normal: [0.72, 0.94], raceFan: [0.80, 0.96], shumaha: [1.04, 1.04] },
   RACE_MIN: 4,              // 一場比賽佔用機台幾遊戲分鐘
   SIGNUP_MIN: 1,            // 第一位報名後等幾分鐘開賽（機台改成一台一人之後就不需要了，見計劃書階段 5 的清單）
+};
+
+// ---- 自動玩家 good 的策略（計劃書 11.5） ----
+export const BOT = {
+  PRICE_LOW: 1.0,         // T1、T2 的售價 ÷ 參考售價
+  PRICE_HIGH: 1.1,        // T3、T4
+  NAIL: 3,
+  RACE_LEVEL: 4,
+  RESTOCK_BELOW: 12,      // 庫存低於幾單位就補貨
+  RESTOCK_QTY: 20,
 };

@@ -25,7 +25,7 @@ for (const lv of LEVELS) {
     for (const type of Object.keys(lv.mix)) assert.ok(CUSTOMER_TYPES[type], type);
     for (const e of lv.events || []) assert.ok(EVENT_KINDS.includes(e.kind), e.kind);
     assert.ok(hasString(`level.${lv.id}.name`));
-    for (const part of ['intro', 'pass', 'fail']) {
+    for (const part of ['intro', 'pass', 'fail'].concat(lv.endings ? ['tie', 'perfect'] : [])) {
       assert.ok(lv[part] && lv[part].length >= 2, `${part} 有對話`);
       for (const line of lv[part]) {
         assert.ok(hasString(line.key), line.key);
