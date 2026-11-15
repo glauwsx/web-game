@@ -13,6 +13,9 @@ import { spawnArrivals, stepCustomers, seatQueue, closeOutCustomers } from './cu
 import { stepStaff, setRole, placeStaff, freeStation, findStaff, kufuActive } from './staff.js';
 import { createRival, rivalRevenue } from './rival.js';
 import { scheduleEvents, fireEvents, stepBosses, setDisguise } from './bosses.js';
+import {
+  stepMachines, setNail, setFee, setCarLevel, bossChoice, bossChallenge, bossChallengeResult,
+} from './machines.js';
 
 export const STATE_VERSION = 1;
 
@@ -22,6 +25,7 @@ function newDay() {
     purchases: 0, wages: 0, prizeCost: 0,
     groups: 0, people: 0, served: 0, angry: 0, lost: 0, happy: 0,
     pieces: 0, wrong: 0, soldOut: 0, caught: 0, sold: {},
+    prizePieces: 0, coupons: 0,
   };
 }
 
@@ -150,6 +154,7 @@ export function stepShop(state) {
     fireEvents(state);
   }
   stepCustomers(state);
+  stepMachines(state);
   stepStaff(state);
   stepBosses(state);
   seatQueue(state);
@@ -218,6 +223,12 @@ const fail = (reason) => ({ ok: false, reason });
  *   { type: 'setUniform', on }
  *   { type: 'sellPremium', item, qty }
  *   { type: 'disguise', on }
+ *   { type: 'setNail', id, nail }          小鋼珠台的釘子設定 1–5
+ *   { type: 'setFee', id, fee }            機台的入場費
+ *   { type: 'setCarLevel', id, level }     壽司車等級 1–5
+ *   { type: 'bossChoice', id, choice }     強敵的對策：'allow'、'counter'
+ *   { type: 'bossChallenge', id }          親自應戰：開始（回傳小遊戲的設定）
+ *   { type: 'bossChallengeResult', id, win } 親自應戰：結果
  */
 export function applyAction(state, action) {
   if (!action || typeof action !== 'object') return fail('bad');
@@ -292,6 +303,30 @@ export const ACTIONS = {
   disguise(state, a) {
     if (state.phase === 'closed') return fail('closed');
     return setDisguise(state, a.on);
+  },
+  setNail(state, a) {
+    if (state.phase === 'closed') return fail('closed');
+    return setNail(state, a.id, a.nail);
+  },
+  setFee(state, a) {
+    if (state.phase === 'closed') return fail('closed');
+    return setFee(state, a.id, a.fee);
+  },
+  setCarLevel(state, a) {
+    if (state.phase === 'closed') return fail('closed');
+    return setCarLevel(state, a.id, a.level);
+  },
+  bossChoice(state, a) {
+    if (state.phase !== 'open') return fail('phase');
+    return bossChoice(state, a.id, a.choice);
+  },
+  bossChallenge(state, a) {
+    if (state.phase !== 'open') return fail('phase');
+    return bossChallenge(state, a.id);
+  },
+  bossChallengeResult(state, a) {
+    if (state.phase !== 'open') return fail('phase');
+    return bossChallengeResult(state, a.id, a.win);
   },
   sellPremium(state, a) {
     if (!state.features.sellPremium) return fail('locked');

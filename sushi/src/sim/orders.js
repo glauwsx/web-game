@@ -38,12 +38,15 @@ export function createOrder(state, c, item, opts = {}) {
   return order;
 }
 
-/** 取消某位顧客的所有訂單。還沒開始做的退回庫存。 */
+/**
+ * 取消某位顧客的所有訂單。還沒開始做的退回庫存。
+ * 機台獎品例外：顧客打包帶走，食材不退回。
+ */
 export function cancelOrdersOf(state, cid) {
   const keep = [];
   for (const o of state.orders) {
     if (o.cid !== cid) { keep.push(o); continue; }
-    if (o.st === 'queued') state.stock[o.item][o.grade]++;
+    if (o.st === 'queued' && !o.prize) state.stock[o.item][o.grade]++;
     o.st = 'cancelled';
   }
   state.orders = keep;
@@ -154,12 +157,20 @@ export function servePiece(state, c, order, server) {
     if (QUALITY[order.grade] === 3 && order.skill >= B.SAT_SKILL_BASE) setThought(state, c, 'yummy');
   }
   c.eaten++;
-  if (!order.prize) c.appetite--;
+  state.day.pieces++;
+  if (order.prize) {
+    // 機台獎品：顧客留在機台前吃（狀態由 sim/machines.js 處理）
+    c.prizeGot++;
+    c.prizePending = Math.max(0, c.prizePending - 1);
+    state.day.prizePieces = (state.day.prizePieces || 0) + 1;
+    removeOrder(state, order);
+    return;
+  }
+  c.appetite--;
   c.st = 'eat';
   c.timer = Math.round(B.EAT_MIN * B.TICKS_PER_MIN);
   c.order = 0;
   state.day.sold[item] = (state.day.sold[item] || 0) + 1;
-  state.day.pieces++;
   removeOrder(state, order);
 }
 

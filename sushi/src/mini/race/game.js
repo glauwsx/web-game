@@ -1,6 +1,6 @@
 // 賽車小遊戲的場景。
 // opts = { track, level, shumaha, stats, laps, auto（一開始就用自動駕駛）, onDone(result) }
-// result = { place, time, integrity, prize }
+// result = { place, time, integrity, prize, shumahaPlace（有修馬哈時他的名次，沒有是 0） }
 import { h } from '../../ui/dom.js';
 import { t } from '../../data/strings.js';
 import { RACE as R } from '../../data/balance.js';
@@ -66,7 +66,9 @@ export function createRaceScene(app, opts = {}) {
   function finish() {
     finished = true;
     const place = p.place || placeOf(race, p);
-    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), prize: prizeForPlace(place) };
+    const sh = race.cars.find((c) => c.kind === 'shumaha');
+    const shumahaPlace = sh ? sh.place || placeOf(race, sh) : 0;
+    const result = { place, time: p.finishT, integrity: Math.round(p.integrity), prize: prizeForPlace(place), shumahaPlace };
     app.sfx(place <= 3 ? 'win' : 'lose');
     el.result.classList.remove('hidden');
     el.result.replaceChildren(
