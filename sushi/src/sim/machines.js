@@ -1,4 +1,4 @@
-// 機台（小鋼珠台、壽司賽道）和經營模擬的整合。純邏輯。
+// 機台（小鋼珠台、賽車機台）和經營模擬的整合。純邏輯。
 // 顧客的 goal 是 'pachinko' 或 'race' 時，由這裡接手：找機台、付入場費、玩、拿獎品、吃獎品、離開。
 // AI 顧客不即時跑小遊戲：小鋼珠從統計表抽樣（計劃書 8.5），賽車用公式決定贏過哪幾款壽司（計劃書 9.6）。
 import * as B from '../data/balance.js';
@@ -183,11 +183,9 @@ function findSpot(state, layout, c) {
   let best = null;
   let bestScore = -Infinity;
   for (const f of machinesOf(state, c.goal)) {
-    // 賽道正在比賽時不能報名
-    if (c.goal === 'race' && f.race && f.race.st !== 'signup') continue;
     const slots = freeSlots(layout, f);
     if (!slots.length) continue;
-    // 職業玩家挑最鬆的台；修馬哈挑等級最低的賽道；其他人挑最想玩的
+    // 職業玩家挑最鬆的台；修馬哈挑難度最低的機台；其他人挑最想玩的
     let score = playChance(f);
     if (c.boss === 'pro') score = f.nail;
     if (c.boss === 'shumaha') score = -f.level;
@@ -257,84 +255,37 @@ function toPrize(c) {
 }
 
 // ---- 賽車 ----
+// 賽車機台一台一位顧客。一坐下就開始，佔用 RACE_MIN 分鐘，流程跟小鋼珠一樣（計劃書 9.6）。
 
-/** 報名下一場。賽道沒有比賽就開一場新的報名。 */
-function signUp(state, c, f) {
+function startRace(state, c, f) {
   payFee(state, c, f);
   c.st = 'play';
+  c.timer = R.RACE_MIN * TPM;
   if (c.skill === undefined) {
     const type = c.boss === 'shumaha' ? 'shumaha' : c.type === 'raceFan' ? 'raceFan' : 'normal';
     const [a, b] = R.AI_SKILL[type];
     c.skill = a === b ? a : rngRange(state.rng, a, b);
   }
-  if (!f.race) f.race = { st: 'signup', t: R.SIGNUP_MIN * TPM, entrants: [], places: {} };
-  f.race.entrants.push(c.id);
 }
 
-/**
- * 決定一場的結果（計劃書 9.6）。每位顧客各自跟機台裡的壽司車比，互相不影響。
- * 回傳 { 顧客 id: 贏過的壽司 id 陣列 }。
- */
-export function raceResults(state, f, entrants) {
-  const won = {};
-  for (const c of entrants) won[c.id] = aiWon(c.skill, f.level, state.rng);
-  return won;
+/** AI 顧客跑一場：贏過哪幾款壽司（計劃書 9.6）。 */
+export function racePlay(state, f, c) {
+  return aiWon(c.skill, f.level, state.rng);
 }
 
-function startRace(state, f) {
-  const entrants = f.race.entrants.map((id) => findCustomer(state, id)).filter((c) => c && c.st === 'play');
-  f.race.entrants = entrants.map((c) => c.id);
-  if (!entrants.length) { f.race = null; return; }
-  f.race.won = raceResults(state, f, entrants);
-  // 名次（1 到 6）：畫面上的小車用
-  f.race.places = {};
-  for (const c of entrants) f.race.places[c.id] = R.LINEUP.length + 1 - f.race.won[c.id].length;
-  f.race.st = 'run';
-  f.race.t = R.RACE_MIN * TPM;
+/** 一場結束：發獎品（贏過的每一款各一貫，沒有就是小黃瓜捲）、更新口碑和滿意度。 */
+function resolveRace(state, c, f) {
+  const won = racePlay(state, f, c);
+  const prizes = prizesFor(won);
+  c.played++;
+  c.lastWon = won;
   f.races = (f.races || 0) + 1;
-}
-
-function finishRace(state, f) {
-  const race = f.race;
-  f.race = null;
-  const again = [];
-  for (const id of race.entrants) {
-    const c = findCustomer(state, id);
-    if (!c || c.st !== 'play') continue;
-    const won = (race.won && race.won[id]) || [];
-    const prizes = prizesFor(won);
-    c.played++;
-    c.lastPlace = R.LINEUP.length + 1 - won.length;
-    c.lastWon = won;
-    awardSushi(state, c, f, prizes);
-    const value = prizeValue(prizes);
-    f.payout = (f.payout || 0) + Math.round(value);
-    pushWom(f, value / f.fee);
-    c.won = (c.won || 0) + Math.round(value);
-    if (value >= f.fee) { c.sat += B.SAT_MACHINE_WIN; setThought(state, c, 'win'); } else { setThought(state, c, 'lose'); }
-    if (wantsMore(state, c, f)) again.push(c);
-    else toPrize(c);
-  }
-  // 再跑一場的人，和比賽中才走到賽道的人，報名下一場
-  for (const c of again) signUp(state, c, f);
-  for (const id of race.waiting || []) {
-    const c = findCustomer(state, id);
-    if (c && c.st === 'play') signUp(state, c, f);
-  }
-}
-
-/** 每個 tick：賽道的報名倒數和比賽時間。 */
-export function stepMachines(state) {
-  for (const f of state.shop.furniture) {
-    if (!f.race) continue;
-    f.race.t--;
-    if (f.race.st === 'signup') {
-      const full = f.race.entrants.length >= FURNITURE[f.type].slots.length;
-      if (f.race.t <= 0 || full) startRace(state, f);
-    } else if (f.race.st === 'run' && f.race.t <= 0) {
-      finishRace(state, f);
-    }
-  }
+  awardSushi(state, c, f, prizes);
+  const value = prizeValue(prizes);
+  f.payout = (f.payout || 0) + Math.round(value);
+  pushWom(f, value / f.fee);
+  c.won = (c.won || 0) + Math.round(value);
+  if (value >= f.fee) { c.sat += B.SAT_MACHINE_WIN; setThought(state, c, 'win'); } else { setThought(state, c, 'lose'); }
 }
 
 // ---- 顧客狀態 ----
@@ -347,11 +298,7 @@ function arrive(state, layout, c) {
     return;
   }
   if (c.goal === 'pachinko') startPachinko(state, c, f);
-  else if (f.race && f.race.st === 'run') {
-    // 走過來的時候比賽已經開始了：等下一場
-    c.st = 'play';
-    (f.race.waiting || (f.race.waiting = [])).push(c.id);
-  } else signUp(state, c, f);
+  else startRace(state, c, f);
   if (c.boss && !c.choice) {
     c.needChoice = true;
     pushFeed(state, c.boss === 'pro' ? 'feed.proSeated' : 'feed.shumahaSeated', null);
@@ -362,10 +309,11 @@ function step(state, layout, c) {
   const f = findFurniture(state, c.furn);
   if (c.st === 'play') {
     if (!f) { toPrize(c); return; }
-    if (c.goal !== 'pachinko') return; // 賽車由 stepMachines 處理
     if (--c.timer > 0) return;
-    resolvePachinko(state, c, f);
-    if (wantsMore(state, c, f)) startPachinko(state, c, f);
+    const start = c.goal === 'pachinko' ? startPachinko : startRace;
+    if (c.goal === 'pachinko') resolvePachinko(state, c, f);
+    else resolveRace(state, c, f);
+    if (wantsMore(state, c, f)) start(state, c, f);
     else toPrize(c);
     return;
   }
@@ -397,7 +345,7 @@ export function setNail(state, id, nail) {
   return { ok: true };
 }
 
-/** 設定入場費。小鋼珠 ¥300 到 ¥1,000，賽道 ¥500 到 ¥1,500，一次 ¥100。 */
+/** 設定入場費。小鋼珠 ¥300 到 ¥1,000，賽車機台 ¥500 到 ¥1,500，一次 ¥100。 */
 export function setFee(state, id, fee) {
   const f = findFurniture(state, id);
   const kind = f && machineOf(f);
@@ -409,8 +357,8 @@ export function setFee(state, id, fee) {
   return { ok: true };
 }
 
-/** 設定壽司車等級（1 到 5）。比賽中改的話從下一場開始算。 */
-export function setCarLevel(state, id, level) {
+/** 設定賽車機台的難度（1 到 5）。正在玩的那一場在結束時用新的難度算。 */
+export function setRaceLevel(state, id, level) {
   const f = findFurniture(state, id);
   if (!f || machineOf(f) !== 'race') return { ok: false, reason: 'bad' };
   const n = Math.round(Number(level));
@@ -427,7 +375,6 @@ export function machineSummary(state, f) {
     wom: wordOfMouth(f), chance: playChance(f),
     income: f.income || 0, payout: f.payout || 0, cost: f.cost || 0, plays: f.plays || 0,
     player: f.occ.find(Boolean) || 0,
-    race: f.race ? { st: f.race.st, t: f.race.t, n: f.race.entrants.length } : null,
   };
 }
 

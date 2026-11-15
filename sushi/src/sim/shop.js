@@ -14,7 +14,7 @@ import { stepStaff, setRole, placeStaff, freeStation, findStaff, kufuActive } fr
 import { createRival, rivalRevenue } from './rival.js';
 import { scheduleEvents, fireEvents, stepBosses, setDisguise } from './bosses.js';
 import {
-  stepMachines, setNail, setFee, setCarLevel, bossChoice, bossChallenge, bossChallengeResult,
+  setNail, setFee, setRaceLevel, bossChoice, bossChallenge, bossChallengeResult,
 } from './machines.js';
 
 export const STATE_VERSION = 1;
@@ -133,7 +133,6 @@ export function addFurniture(state, type, x, y, extra = {}) {
     f.wom = [];
     f.income = 0;
     f.payout = 0;
-    f.race = null;
   }
   state.shop.furniture.push(f);
   state.shop.ver++;
@@ -154,7 +153,6 @@ export function stepShop(state) {
     fireEvents(state);
   }
   stepCustomers(state);
-  stepMachines(state);
   stepStaff(state);
   stepBosses(state);
   seatQueue(state);
@@ -225,7 +223,7 @@ const fail = (reason) => ({ ok: false, reason });
  *   { type: 'disguise', on }
  *   { type: 'setNail', id, nail }          小鋼珠台的釘子設定 1–5
  *   { type: 'setFee', id, fee }            機台的入場費
- *   { type: 'setCarLevel', id, level }     壽司車等級 1–5
+ *   { type: 'setRaceLevel', id, level }    賽車機台的難度 1–5
  *   { type: 'bossChoice', id, choice }     強敵的對策：'allow'、'counter'
  *   { type: 'bossChallenge', id }          親自應戰：開始（回傳小遊戲的設定）
  *   { type: 'bossChallengeResult', id, win } 親自應戰：結果
@@ -312,9 +310,9 @@ export const ACTIONS = {
     if (state.phase === 'closed') return fail('closed');
     return setFee(state, a.id, a.fee);
   },
-  setCarLevel(state, a) {
+  setRaceLevel(state, a) {
     if (state.phase === 'closed') return fail('closed');
-    return setCarLevel(state, a.id, a.level);
+    return setRaceLevel(state, a.id, a.level);
   },
   bossChoice(state, a) {
     if (state.phase !== 'open') return fail('phase');

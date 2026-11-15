@@ -481,3 +481,15 @@ button {
 .boss-body p { margin: 0 0 0.4em; }
 .boss-opts { margin: 0; padding-left: 1.1em; font-size: 0.88em; }
 .boss-opts li { margin-bottom: 0.25em; }
+
+/* 賽車 HUD 的壽司圖示：贏過的點亮。只改亮度，不改大小和位置 */
+.race-won { display: inline-flex; gap: 0.15em; align-items: center; }
+.won-icon { display: inline-flex; padding: 0.1em; border-radius: 0.25em; outline: 1px solid transparent; filter: grayscale(1) brightness(0.45); opacity: 0.7; transition: filter 0.2s, opacity 0.2s; }
+.won-icon.on { filter: none; opacity: 1; outline-color: #ffe08a; background: rgba(255, 224, 138, 0.18); }
+.won-icon .px-icon { width: 1.6em; height: auto; display: block; }
+.race-got { position: absolute; left: 0; right: 0; top: 18%; text-align: center; font-size: 1.6em; font-weight: 900; color: #ffe08a; text-shadow: 0 0.06em 0 #8a2c20, 0 0 0.3em rgba(0, 0, 0, 0.6); pointer-events: none; }
+.race-got.show { animation: race-got 1.2s ease-out forwards; }
+@keyframes race-got { 0% { opacity: 0; } 15% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+.race-prize-list { display: flex; flex-wrap: wrap; gap: 0.3em 0.8em; padding: 0.2em 0 0.4em; }
+.race-prize { display: inline-flex; align-items: center; gap: 0.3em; font-weight: 700; }
+.race-prize .px-icon { width: 2.4em; height: auto; }

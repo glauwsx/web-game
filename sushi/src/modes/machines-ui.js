@@ -50,7 +50,7 @@ facilitySections.push((s0, env, ups) => {
     const fee = stepper(`fee-${id}`, () => cur().fee, (v) => env.act({ type: 'setFee', id, fee: v }), B.FEE_STEP, yen);
     const knob = kind === 'pachinko'
       ? stepper(`nail-${id}`, () => cur().nail, (v) => env.act({ type: 'setNail', id, nail: v }), 1, (v) => t('mach.nail.v', { n: v }))
-      : stepper(`level-${id}`, () => cur().level, (v) => env.act({ type: 'setCarLevel', id, level: v }), 1, (v) => t('mach.level.v', { n: v }));
+      : stepper(`level-${id}`, () => cur().level, (v) => env.act({ type: 'setRaceLevel', id, level: v }), 1, (v) => t('mach.level.v', { n: v }));
     const trial = h('button', {
       class: 'btn plain mini', dataset: { id: `trial-${id}` },
       onclick: () => { if (env.app) openTrial(env.app, cur()); },
@@ -74,8 +74,7 @@ facilitySections.push((s0, env, ups) => {
       sub.textContent = t('mach.sub', { wom: m.wom.toFixed(2), chance: Math.round(Math.min(1, m.chance) * 100), income: m.income.toLocaleString('en-US'), payout: m.payout.toLocaleString('en-US') });
       const who = m.player ? s.customers.find((c) => c.id === m.player) : null;
       let st = t('mach.idle');
-      if (kind === 'race' && m.race) st = m.race.st === 'run' ? t('mach.race.run', { n: m.race.n }) : t('mach.race.signup', { n: m.race.n });
-      else if (who) st = t('mach.playing', { who: t(`ctype.${who.boss || who.type}`) });
+      if (who) st = t('mach.playing', { who: t(`ctype.${who.boss || who.type}`) });
       status.textContent = st;
       status.classList.toggle('warn', !!(who && who.boss) || s.customers.some((c) => c.boss && c.furn === id && c.st === 'play'));
     });
@@ -94,48 +93,33 @@ function machineInfo(state, f, env) {
       h('button', { class: 'btn plain mini', dataset: { id: `info-trial-${f.id}` }, onclick: () => { if (env.app) openTrial(env.app, f); } }, t('mach.trial'))));
 }
 furnitureInfo.pachinko = machineInfo;
-furnitureInfo.raceTrack = machineInfo;
+furnitureInfo.raceCab = machineInfo;
 
-// ---- 賽道上的小車 ----
-// 賽道是 4×3 的檯子，跑道是中間那一圈（相對於家具左上角 0.6 到 3.4、0.6 到 2.4），高度 12.6 像素。
-const LOOP = { u0: 0.6, u1: 3.4, v0: 0.6, v1: 2.4, z: 12.6 };
-const LOOP_LEN = 2 * (LOOP.u1 - LOOP.u0) + 2 * (LOOP.v1 - LOOP.v0);
-const CAR_COLORS = ['#f6ecd4', '#5d8c3c', '#2f4270', '#e2a93b', '#c86fd0', '#b5402f'];
+// ---- 賽車機台的螢幕動畫 ----
+// 有人在玩時，螢幕上的路面分隔線往下捲動，小黃瓜捲車左右晃。位置對齊 data/sprites/furniture.js 的 raceCab。
+const SCREEN = { u0: 0.2, u1: 0.8, v: 0.62, z0: 16, z1: 24 };
 
-/** 跑道上的位置（p 是 0 到 1 的一圈）。從起跑線（前緣中間）開始逆時針。 */
-function loopPoint(p) {
-  let d = (((p % 1) + 1) % 1) * LOOP_LEN;
-  const w = LOOP.u1 - LOOP.u0;
-  const hh = LOOP.v1 - LOOP.v0;
-  const start = w / 2;
-  d = (d + start) % LOOP_LEN;
-  if (d < w) return [LOOP.u1 - d, LOOP.v1];
-  d -= w;
-  if (d < hh) return [LOOP.u0, LOOP.v1 - d];
-  d -= hh;
-  if (d < w) return [LOOP.u0 + d, LOOP.v0];
-  d -= w;
-  return [LOOP.u1, LOOP.v0 + d];
-}
-
-furnitureDraw.raceTrack = (ctx, x, y, f, state, time) => {
-  const race = f.race;
-  const total = B.RACE.RACE_MIN * B.TICKS_PER_MIN;
-  const e = race && race.st === 'run' ? 1 - race.t / total : 0;
-  // 6 台車。參賽顧客照名次決定速度，其他是店家的壽司車
-  const ids = race ? race.entrants : [];
-  for (let i = 0; i < 6; i++) {
-    const place = ids[i] && race.places ? race.places[ids[i]] || 4 : 2 + (i % 4);
-    const speed = 1 - (place - 1) * 0.035;
-    const wobble = race && race.st === 'run' ? Math.sin(time / 300 + i) * 0.01 : 0;
-    const p = e * B.RACE.LAPS * speed + wobble - i * 0.025;
-    const [u, v] = loopPoint(p);
-    const w = gridToWorld(u, v, LOOP.z);
-    const lane = (i % 2) * 1;
-    ctx.fillStyle = '#17110c';
-    ctx.fillRect(Math.round(x + w.x) - 1, Math.round(y + w.y) - 1 + lane, 4, 3);
-    ctx.fillStyle = ids[i] ? '#ff6a50' : CAR_COLORS[i];
-    ctx.fillRect(Math.round(x + w.x), Math.round(y + w.y) - 1 + lane, 2, 2);
+furnitureDraw.raceCab = (ctx, x, y, f, state, time) => {
+  const who = f.occ.find(Boolean);
+  const c = who && state.customers.find((p) => p.id === who);
+  if (!c || c.st !== 'play') return;
+  // 路中間的分隔線：三段，往下捲
+  const phase = (time / 120) % 1;
+  for (let k = 0; k < 3; k++) {
+    const z = SCREEN.z1 - ((k + phase) / 3) * (SCREEN.z1 - SCREEN.z0);
+    const w = gridToWorld(0.5, SCREEN.v, z);
+    ctx.fillStyle = '#f6ecd4';
+    ctx.fillRect(Math.round(x + w.x), Math.round(y + w.y), 1, 1);
+  }
+  // 玩家的車
+  const car = gridToWorld(0.5 + Math.sin(time / 260) * 0.08, SCREEN.v, SCREEN.z0 + 2);
+  ctx.fillStyle = '#5d8c3c';
+  ctx.fillRect(Math.round(x + car.x) - 1, Math.round(y + car.y) - 1, 3, 2);
+  // 招牌燈閃
+  if (Math.floor(time / 300) % 2) {
+    const lamp = gridToWorld(0.5, 0.5, 37);
+    ctx.fillStyle = '#fff3a0';
+    ctx.fillRect(Math.round(x + lamp.x) - 2, Math.round(y + lamp.y), 4, 1);
   }
 };
 

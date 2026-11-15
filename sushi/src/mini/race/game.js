@@ -6,7 +6,9 @@ import { t } from '../../data/strings.js';
 import { RACE as R } from '../../data/balance.js';
 import { createStepper } from '../../core/loop.js';
 import { createRace, stepRace, playerCar, placeOf, wonSushi } from './physics.js';
-import { autopilotInput, prizesFor } from './ai.js';
+import { autopilotInput, prizesFor, prizeValue } from './ai.js';
+import { sushiIcon } from '../../ui/panels.js';
+import { yen } from '../../ui/hud.js';
 import { drawRace } from './render.js';
 
 const COUNTDOWN_MS = 3000;
@@ -25,6 +27,11 @@ export function createRaceScene(app, opts = {}) {
   let renderMs = 0;
   let renderN = 0;
   const el = {};
+  // HUD 的壽司圖示：這一場的對手壽司車（照 LINEUP 由慢到快）。贏過的點亮
+  const rivals = race.cars.filter((c) => c.kind === 'shop').map((c) => c.sushi).sort((a, b) => R.LINEUP.indexOf(a) - R.LINEUP.indexOf(b));
+  const wonIcons = {};
+  let lastWon = [];
+  let gotTimer = 0;
 
   // 觸控按鈕：按住時把對應的鍵設成按下
   const hold = (code, label, cls) => {
@@ -40,10 +47,12 @@ export function createRaceScene(app, opts = {}) {
   const root = h('div', { class: 'scene race-scene' },
     h('div', { class: 'race-hud solid' },
       el.lap = h('span', null, ''), el.place = h('span', { class: 'race-place' }, ''),
-      el.won = h('span', { dataset: { id: 'race-won' } }, ''), el.speed = h('span', null, ''), el.boost = h('span', null, ''), el.integ = h('span', null, ''),
+      el.won = h('span', { class: 'race-won', dataset: { id: 'race-won' } },
+        rivals.map((id) => (wonIcons[id] = h('span', { class: 'won-icon', dataset: { sushi: id }, title: t(`sushi.${id}`) }, sushiIcon(id, 2))))), el.speed = h('span', null, ''), el.boost = h('span', null, ''), el.integ = h('span', null, ''),
       h('button', { class: 'btn plain mini', dataset: { id: 'race-auto' }, onclick: () => { auto = !auto; } }, t('race.auto')),
       h('button', { class: 'btn plain mini', dataset: { id: 'race-exit' }, onclick: exit }, t('race.exit'))),
     el.center = h('div', { class: 'race-center' }, ''),
+    el.got = h('div', { class: 'race-got hidden', dataset: { id: 'race-got' } }, ''),
     h('div', { class: 'race-hint' }, t('race.hint')),
     h('div', { class: 'race-pad left' }, hold('ArrowLeft', t('race.btn.left')), hold('ArrowRight', t('race.btn.right'))),
     h('div', { class: 'race-pad right' }, hold('Space', t('race.btn.boost'), 'boost'), hold('ArrowDown', t('race.btn.brake')), hold('ArrowUp', t('race.btn.gas'), 'gas')),
@@ -65,6 +74,7 @@ export function createRaceScene(app, opts = {}) {
 
   function finish() {
     finished = true;
+    el.got.classList.add('hidden');
     const place = p.place || placeOf(race, p);
     const won = wonSushi(race);
     const sh = race.cars.find((c) => c.kind === 'shumaha');
@@ -82,7 +92,10 @@ export function createRaceScene(app, opts = {}) {
       h('div', { class: 'res-line' }, h('span', null, t('race.result.integrity')), h('span', null, `${result.integrity}%`)),
       vsShumaha
         ? h('div', { class: 'res-line' }, h('span', null, t('race.result.shumaha')), h('span', null, t('race.place', { n: shumahaPlace })))
-        : h('div', { class: 'res-line' }, h('span', null, t('race.result.prize')), h('span', { dataset: { id: 'race-prize' } }, (won.length ? '' : t('race.consolation')) + result.prizes.map((id) => t(`sushi.${id}`)).join('、'))),
+        : h('div', { class: 'res-prizes' },
+          h('div', { class: 'res-line' }, h('span', null, won.length ? t('race.result.prize') : t('race.consolation')), h('span', { dataset: { id: 'race-value' } }, t('race.result.value', { v: yen(prizeValue(result.prizes)) }))),
+          h('div', { class: 'race-prize-list', dataset: { id: 'race-prize' } },
+            result.prizes.map((id) => h('span', { class: 'race-prize' }, sushiIcon(id, 3), t(`sushi.${id}`))))),
       vsShumaha ? h('div', { class: `pk-verdict ${beat ? 'win' : 'lose'}`, dataset: { id: 'race-verdict' } }, t(beat ? 'race.result.beat' : 'race.result.lost')) : '',
       h('div', { class: 'menu-foot' },
         opts.onDone ? null : h('button', { class: 'btn plain', dataset: { id: 'race-again' }, onclick: () => app.scenes.replace(createRaceScene(app, opts)) }, t('race.again')),
@@ -91,13 +104,36 @@ export function createRaceScene(app, opts = {}) {
     updateHud();
   }
 
+  /**
+   * 壽司圖示：贏過的點亮，被追回去的變暗（計劃書 9.2）。圖示只改亮度，不改大小和位置。
+   * 剛超過一台時跳「入手：某某」並播音效；被追回去播 deny。
+   */
+  function updateWon() {
+    const now = wonSushi(race);
+    for (const id of rivals) wonIcons[id].classList.toggle('on', now.includes(id));
+    if (countdown <= 0 && !finished) {
+      const gained = now.filter((id) => !lastWon.includes(id));
+      const lost = lastWon.filter((id) => !now.includes(id));
+      if (gained.length) {
+        el.got.textContent = t('race.got', { name: gained.map((id) => t(`sushi.${id}`)).join('、') });
+        el.got.classList.remove('hidden', 'show');
+        void el.got.offsetWidth;
+        el.got.classList.add('show');
+        gotTimer = 1200;
+        app.sfx('star', 150);
+      } else if (lost.length) {
+        app.sfx('deny', 150);
+      }
+    }
+    lastWon = now;
+  }
+
   function updateHud() {
     el.lap.textContent = t('race.lap', { n: Math.min(race.laps, p.lap + 1), total: race.laps });
     el.place.textContent = t('race.place', { n: placeOf(race, p) });
     el.speed.textContent = `${t('race.speed')} ${Math.round((p.speed / R.MAX_SPEED) * 120)}`;
     el.boost.textContent = `${t('race.boost')} ${'●'.repeat(p.boosts)}${'○'.repeat(R.BOOSTS - p.boosts)}`;
-    // TODO(Opus)：改成壽司圖示。贏過的點亮，被追回去的變暗（見計劃書 9.2、階段 5 的清單）
-    el.won.textContent = `${t('race.won')} ${wonSushi(race).length}/${race.cars.filter((c) => c.kind === 'shop').length}`;
+    updateWon();
     el.integ.textContent = `${t('race.integrity')} ${Math.round(p.integrity)}%`;
   }
 
@@ -129,6 +165,7 @@ export function createRaceScene(app, opts = {}) {
         }
         if (race.events.length >= 20) seenEvents = race.events.length;
       } else if (!finished) finish();
+      if (gotTimer > 0) { gotTimer -= dt; if (gotTimer <= 0) el.got.classList.add('hidden'); }
       uiTimer += dt;
       if (uiTimer > 100) { uiTimer = 0; updateHud(); }
     },

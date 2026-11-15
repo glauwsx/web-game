@@ -32,6 +32,10 @@ await runE2E('race', async ({ open, check, shot }) => {
   check(/第 \d 名/.test(await page.locator('[data-id="race-place"]').textContent()), '結果畫面顯示名次');
   check(m.result.won.length === 6 - m.result.place && m.result.prizes.length >= 1, `贏過 ${m.result.won.length} 台壽司車，拿到 ${m.result.prizes.join('、')}`);
   check((await page.locator('[data-id="race-prize"]').textContent()).length > 0, '結果畫面列出贏到的壽司');
+  const icons = await page.evaluate(() => [...document.querySelectorAll('.won-icon')].map((e) => e.classList.contains('on')));
+  check(icons.length === 5 && icons.filter(Boolean).length === m.result.won.length, `HUD 有 5 個壽司圖示，點亮 ${icons.filter(Boolean).length} 個（贏過 ${m.result.won.length} 台）`);
+  check(/價值 ¥/.test(await page.locator('[data-id="race-value"]').textContent()), '結果畫面顯示獎品價值');
+  check((await page.locator('.race-prize').count()) === m.result.prizes.length, '結果畫面用圖示列出每一貫獎品');
   await shot(page, 'p5-race-result.png');
   await page.click('button[data-id="race-done"]');
   await waitScene(page, 'menu');
@@ -68,7 +72,7 @@ await runE2E('race-shop', async ({ open, check, shot }) => {
   const lv = await open(DESKTOP, '?debug=1&seed=2&scene=level:6&nointro=1&nohints=1&unlock=1');
   await waitScene(lv, 'level');
   await lv.click('[data-tab="fac"]');
-  const id = await lv.evaluate(() => window.__sushi.state().shop.furniture.find((f) => f.type === 'raceTrack').id);
+  const id = await lv.evaluate(() => window.__sushi.state().shop.furniture.find((f) => f.type === 'raceCab').id);
   await lv.click(`[data-id="level-${id}-plus"]`);
   await lv.click(`[data-id="fee-${id}-minus"]`);
   const f = await lv.evaluate((fid) => window.__sushi.state().shop.furniture.find((x) => x.id === fid), id);
@@ -81,8 +85,8 @@ await runE2E('race-shop', async ({ open, check, shot }) => {
   check(true, '試玩按 Esc 回到經營畫面');
   // 開店後賽道上會有比賽
   await lv.evaluate(() => { window.__sushi.act({ type: 'buySuggested' }); window.__sushi.act({ type: 'open' }); window.__sushi.step(8 * 120); });
-  const races = await lv.evaluate((fid) => window.__sushi.state().shop.furniture.find((x) => x.id === fid).races || 0, id);
-  check(races > 0, `開店 2 小時內賽道跑了 ${races} 場`);
+  const races = await lv.evaluate(() => window.__sushi.state().shop.furniture.filter((x) => x.type === 'raceCab').reduce((a, x) => a + (x.races || 0), 0));
+  check(races > 0, `開店 2 小時內賽車機台跑了 ${races} 場`);
   await shot(lv, 'p5-shop.png');
 
   const l7 = await open(DESKTOP, '?debug=1&seed=1&scene=level:7&nointro=1&nohints=1&unlock=1');

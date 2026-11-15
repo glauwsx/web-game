@@ -130,8 +130,8 @@ export function arrivalLambda(state, hour) {
 export function mixWeights(state, hour) {
   const types = [];
   const weights = [];
-  const hasPachinko = state.shop.furniture.some((f) => f.type === 'pachinko');
-  const hasRace = state.shop.furniture.some((f) => f.type === 'raceTrack');
+  const hasPachinko = state.shop.furniture.some((f) => FURNITURE[f.type].machine === 'pachinko');
+  const hasRace = state.shop.furniture.some((f) => FURNITURE[f.type].machine === 'race');
   for (const [type, w] of Object.entries(state.mix)) {
     let weight = w;
     if (type === 'salaryman' && B.LUNCH_HOURS.includes(hour)) weight *= B.LUNCH_SALARYMAN_MULT;

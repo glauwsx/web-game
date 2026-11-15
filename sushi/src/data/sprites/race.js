@@ -1,13 +1,50 @@
 // 賽車小遊戲的像素圖：遙控壽司車（車後視角）、路邊的桌上物品。用程式畫。
 import { grid, rect, set, dots, stamp, toSprite } from './pixgrid.js';
 
-/** 遙控壽司車。body 是車身顏色，dark 是陰影色，top 是車頂壽司的配料顏色。 */
-function car(body, dark, top, stripe) {
+/**
+ * 車頂的壽司（10×6，畫在 x 8 到 17、y 0 到 5）。每款看得出是哪一種：
+ * 玉子黃色帶海苔、鮭魚橘色帶白紋、赤身紅色、鮭魚卵是海苔圍著橘紅顆粒、大腹粉紅帶油花、小黃瓜捲是海苔捲中間一點綠。
+ */
+const ROOFS = {
+  tamago(g) {
+    rect(g, 8, 0, 10, 3, 'y'); rect(g, 9, 0, 8, 1, 'Y');
+    rect(g, 12, 0, 2, 6, 'j');
+    rect(g, 8, 3, 4, 3, 'w'); rect(g, 14, 3, 4, 3, 'w');
+  },
+  sake(g) {
+    rect(g, 8, 0, 10, 3, 'o'); rect(g, 9, 0, 8, 1, 'f');
+    dots(g, [[10, 1], [11, 2], [14, 1], [15, 2]], 'x');
+    rect(g, 8, 3, 10, 3, 'w');
+  },
+  maguro(g) {
+    rect(g, 8, 0, 10, 3, 'F'); rect(g, 9, 0, 7, 1, 'R');
+    rect(g, 8, 3, 10, 3, 'w');
+  },
+  ikura(g) {
+    rect(g, 8, 1, 10, 5, 'j');
+    rect(g, 9, 0, 8, 3, 'z');
+    dots(g, [[9, 0], [11, 1], [13, 0], [15, 1], [10, 2], [14, 2], [16, 0]], 'F');
+    dots(g, [[10, 0], [14, 0]], 'Y');
+  },
+  otoro(g) {
+    rect(g, 8, 0, 10, 3, 'p'); rect(g, 9, 0, 8, 1, 'P');
+    dots(g, [[9, 1], [10, 2], [13, 1], [14, 2], [16, 1]], 'w');
+    rect(g, 8, 3, 10, 3, 'w');
+  },
+  kappa(g) {
+    // 兩個海苔捲並排
+    for (const x of [8, 13]) {
+      rect(g, x, 0, 5, 6, 'j');
+      rect(g, x + 1, 1, 3, 4, 'w');
+      rect(g, x + 2, 2, 1, 2, 'l');
+    }
+  },
+};
+
+/** 遙控壽司車。body 是車身顏色，dark 是陰影色，roof 是車頂那一款壽司的 id。 */
+function car(body, dark, roof, stripe) {
   const g = grid(26, 20);
-  // 車頂的壽司：醋飯加配料
-  rect(g, 8, 0, 10, 3, top);
-  rect(g, 9, 0, 8, 1, stripe || top);
-  rect(g, 8, 3, 10, 3, 'w');
+  ROOFS[roof](g);
   rect(g, 8, 5, 10, 1, 'G');
   // 車身
   rect(g, 5, 6, 16, 4, body);
@@ -116,13 +153,14 @@ function wasabiHill() {
 }
 
 export const RACE_SPRITES = {
-  'race.car.player': car('w', 'G', 'F', 'r'),
-  'race.car.shop0': car('U', 'u', 'y', null),
-  'race.car.shop1': car('N', 'n', 'f', null),
-  'race.car.shop2': car('o', 'm', 'x', null),
-  'race.car.shop3': car('V', 'v', 'z', null),
-  'race.car.shop4': car('q', 'n', 'w', null),
-  'race.car.shumaha': car('r', 'm', 'F', 'y'),
+  // 車的名稱是車頂那一款壽司。玩家永遠開小黃瓜捲；修馬哈的車也載小黃瓜捲，但車身是紅色帶黃線
+  'race.car.kappa': car('w', 'G', 'kappa', 'r'),
+  'race.car.tamago': car('U', 'u', 'tamago', null),
+  'race.car.sake': car('N', 'n', 'sake', null),
+  'race.car.maguro': car('o', 'm', 'maguro', null),
+  'race.car.ikura': car('V', 'v', 'ikura', null),
+  'race.car.otoro': car('q', 'n', 'otoro', null),
+  'race.car.shumaha': car('r', 'm', 'kappa', 'y'),
   'race.teacup': teacup(),
   'race.soyBottle': soyBottle(),
   'race.chopstickRest': chopstickRest(),

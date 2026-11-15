@@ -95,34 +95,33 @@ function pachinko() {
   return isoSprite(ic);
 }
 
-// 壽司賽道 4×3：一張大檯子，上面是迷你賽道
-function raceTrack() {
-  const ic = isoCanvas(4, 3, 18);
-  isoBox(ic, 0.1, 0.1, 0, 3.9, 2.9, 10, 'N', 'b', 'a');
-  isoBox(ic, 0, 0, 10, 4, 3, 12, 'c', 'c', 'b');
-  isoFlat(ic, 0.15, 0.15, 3.85, 2.85, 12.2, 'N');
-  // 賽道（外圈灰色，內圈草地）
-  isoFlat(ic, 0.35, 0.35, 3.65, 2.65, 12.4, 'K');
-  isoFlat(ic, 0.85, 0.85, 3.15, 2.15, 12.6, 'l');
-  // 起跑線
-  isoFlat(ic, 1.9, 2.15, 2.0, 2.65, 12.8, 'w');
-  // 內圈的桌上景物：醬油瓶、茶杯、山葵山
-  const [sx, sy] = at(ic, 1.4, 1.3, 13);
-  rect(ic.g, sx, sy - 5, 3, 5, 'a'); rect(ic.g, sx, sy - 6, 3, 1, 'r');
-  const [tx, ty] = at(ic, 2.2, 1.6, 13);
-  rect(ic.g, tx, ty - 3, 4, 3, 'q'); rect(ic.g, tx, ty - 3, 4, 1, 'w');
-  const [wx, wy] = at(ic, 2.7, 1.2, 13);
-  stamp(ic.g, wx - 2, wy - 3, ['..l..', '.lNl.', 'lNNNl']);
-  // 控制台（顧客站的那一側，朝 +gy）
-  for (const u of [0.5, 1.5, 2.5, 3.5]) {
-    const [cx, cy] = at(ic, u, 3, 9);
-    rect(ic.g, cx - 3, cy - 2, 6, 3, 'k');
-    set(ic.g, cx - 1, cy - 1, 'R'); set(ic.g, cx + 1, cy - 1, 'y');
+// 賽車機台 1×2：街機。正面（朝 +gy）有螢幕、方向盤，前面有一張賽車椅
+function raceCab() {
+  const ic = isoCanvas(1, 2, 38);
+  // 機台本體（黑色帶紅邊）
+  isoBox(ic, 0.08, 0.05, 0, 0.92, 0.62, 34, 'K', 'k', 'K');
+  // 頂部的招牌燈箱
+  isoBox(ic, 0.08, 0.05, 34, 0.92, 0.5, 38, 'y', 'r', 'R');
+  const P = (u, z) => isoP(ic, u, 0.62, z);
+  // 招牌上的格紋旗
+  for (const [u, c] of [[0.3, 'k'], [0.42, 'w'], [0.54, 'k'], [0.66, 'w']]) {
+    const [x, y] = isoP(ic, u, 0.5, 36);
+    set(ic.g, Math.round(x), Math.round(y), c);
   }
-  // 旗子
-  const [fx, fy] = at(ic, 2.0, 0.3, 13);
-  rect(ic.g, fx, fy - 9, 1, 9, 'G');
-  stamp(ic.g, fx + 1, fy - 9, ['kwkw', 'wkwk', 'kwkw']);
+  // 螢幕：天空、地平線、路
+  poly(ic.g, [P(0.16, 31), P(0.84, 31), P(0.84, 15), P(0.16, 15)], 'u');
+  poly(ic.g, [P(0.2, 30), P(0.8, 30), P(0.8, 24), P(0.2, 24)], 'I');
+  poly(ic.g, [P(0.2, 24), P(0.8, 24), P(0.8, 16), P(0.2, 16)], 'N');
+  poly(ic.g, [P(0.46, 24), P(0.54, 24), P(0.74, 16), P(0.26, 16)], 'B');
+  const [cx, cy] = P(0.5, 18);
+  rect(ic.g, Math.round(cx) - 1, Math.round(cy) - 1, 2, 1, 'y'); // 螢幕裡的小黃瓜捲車
+  // 控制台和方向盤
+  poly(ic.g, [P(0.12, 13), P(0.88, 13), P(0.88, 9), P(0.12, 9)], 'r');
+  const [wx, wy] = P(0.5, 12);
+  stamp(ic.g, Math.round(wx) - 3, Math.round(wy) - 2, ['.kkkk.', 'k....k', 'k.gg.k', '.kkkk.']);
+  // 賽車椅
+  isoBox(ic, 0.25, 1.15, 0, 0.75, 1.7, 7, 'R', 'r', 'm');
+  isoBox(ic, 0.25, 1.55, 7, 0.75, 1.72, 15, 'R', 'r', 'm');
   return isoSprite(ic);
 }
 
@@ -246,7 +245,7 @@ export const FURNITURE_SPRITES = {
   'furn.counterSeat': counterSeat(),
   'furn.tableSet': tableSet(),
   'furn.pachinko': pachinko(),
-  'furn.raceTrack': raceTrack(),
+  'furn.raceCab': raceCab(),
   'furn.fridge': fridge(),
   'furn.lantern': lantern(),
   'furn.fishTank': fishTank(),

@@ -32,10 +32,10 @@ export const FURNITURE = {
     w: 1, h: 2, price: 80000, machine: 'pachinko',
     slots: [{ role: 'play', px: 0.5, py: 1.42, z: 7, face: 'N', pose: 'sit', access: [[0, 2], [-1, 1], [1, 1]] }],
   },
-  raceTrack: {
-    w: 4, h: 3, price: 300000, machine: 'race',
-    reserve: [[0, 3], [1, 3], [2, 3], [3, 3]],
-    slots: [0, 1, 2, 3].map((i) => ({ role: 'play', px: i + 0.5, py: 3.4, z: 0, face: 'N', pose: 'stand', access: [[i, 3]] })),
+  // 賽車機台：一台坐一位顧客，跟小鋼珠台同樣的擺法
+  raceCab: {
+    w: 1, h: 2, price: 150000, machine: 'race',
+    slots: [{ role: 'play', px: 0.5, py: 1.42, z: 7, face: 'N', pose: 'sit', access: [[0, 2], [-1, 1], [1, 1]] }],
   },
   fridge: { w: 1, h: 1, price: 30000, stock: 150, slots: [] },
   lantern: { w: 1, h: 1, price: 10000, attraction: 0.05, slots: [] },
@@ -44,4 +44,4 @@ export const FURNITURE = {
   uniformSign: { w: 1, h: 1, price: 5000, slots: [] },
 };
 
-export const FURNITURE_ORDER = ['chefStation', 'counterSeat', 'tableSet', 'pachinko', 'raceTrack', 'fridge', 'lantern', 'fishTank', 'plant', 'uniformSign'];
+export const FURNITURE_ORDER = ['chefStation', 'counterSeat', 'tableSet', 'pachinko', 'raceCab', 'fridge', 'lantern', 'fishTank', 'plant', 'uniformSign'];

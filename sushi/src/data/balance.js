@@ -94,7 +94,7 @@ export const RIVAL_NOISE = 0.03;
 
 // ---- 機台的吸引力 ----
 export const PACHINKO_ATTRACTION = 0.04;
-export const RACE_ATTRACTION = 0.12;
+export const RACE_ATTRACTION = 0.12;     // 每台賽車機台（舊的賽道是 4 人一座；改成一台一人後，3 台加起來是 0.36，階段 6 要重看）
 
 // ---- 機台的顧客 ----
 // 一般客進門時有這個機率考慮去玩機台（再乘上「玩的機率」）。計劃書沒有寫比例，自己定的。
@@ -206,5 +206,4 @@ export const RACE = {
   AI_NOISE: 0.02,
   AI_SKILL: { normal: [0.72, 0.94], raceFan: [0.80, 0.96], shumaha: [1.04, 1.04] },
   RACE_MIN: 4,              // 一場比賽佔用機台幾遊戲分鐘
-  SIGNUP_MIN: 1,            // 第一位報名後等幾分鐘開賽（機台改成一台一人之後就不需要了，見計劃書階段 5 的清單）
 };
