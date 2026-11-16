@@ -17,6 +17,7 @@ import { createEndless } from './sim/endless.js';
 import { createRaceScene } from './mini/race/game.js';
 import { TRACKS } from './data/tracks.js';
 import { createPachinkoScene } from './mini/pachinko/game.js';
+import { createCustomerScene } from './modes/customer.js';
 import { BOARDS } from './data/pachinko-boards.js';
 
 const W = 480;
@@ -152,6 +153,9 @@ app.routes.endless = (a, arg) => {
   return true;
 };
 app.settingsExtra = [endlessSettings];
+
+// 顧客版本。?scene=customer
+app.routes.customer = (a) => { scenes.reset(createCustomerScene(a)); return true; };
 
 // ?scene=race 或 ?scene=race:賽道id：直接開一場賽車（自由遊玩）
 app.routes.race = (a, arg) => createRaceScene(a, { track: TRACKS[arg] ? arg : 'itamae', level: 3 });

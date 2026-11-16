@@ -45,9 +45,9 @@ await runE2E('smoke', async ({ open, check, shot }) => {
     check(await page.locator('input[data-id="set-sfx"]').isVisible(), `${label}：設定畫面有音量`);
     await page.keyboard.press('Escape');
     await waitScene(page, 'menu');
-    // 還沒做的功能進佔位場景，可以返回
+    // 顧客版本，可以用 Esc 返回
     await page.click('button[data-id="customer"]');
-    await page.waitForFunction(() => window.__sushi.scene().startsWith('placeholder'));
+    await waitScene(page, 'customer');
     await page.keyboard.press('Escape');
     await waitScene(page, 'menu');
     check(true, `${label}：子畫面可以返回主選單`);

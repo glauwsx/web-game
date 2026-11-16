@@ -294,3 +294,16 @@ export const TRAIN = {
   SKILL_EVERY: 2,         // 每 2 級技術 +1
   WALK: 0.1,              // 每級走路速度 +10%
 };
+
+// ---- 顧客版本（計劃書 13） ----
+export const CUSTOMER = {
+  STAT_STEP: 0.05,          // 角色賽車數值：高 = 1 + 0.05、低 = 1 − 0.05
+  ALLOWANCE: 5000,          // 零用錢挑戰的起始零用錢
+  PACHINKO_FEE: 500,        // 零用錢挑戰的入場費（店家預設）
+  RACE_FEE: 800,
+  NAIL: 3,                  // 零用錢挑戰固定的釘子設定和賽車難度
+  RACE_LEVEL: 3,
+  NAIL_CHOICES: { tight: 1, normal: 3, loose: 5 }, // 自由遊玩的「緊、普通、鬆」
+  BOARD_SIZE: 10,           // 排行榜留幾名
+  SET_NAMI_PIECES: 5,       // 圖鑑：一局小鋼珠（不算大獎）贏到幾貫以上，算贏到並套餐
+};

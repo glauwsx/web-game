@@ -191,3 +191,15 @@ export const CUSTOMER_TYPES = {
   pro:         { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },
   shumaha:     { appetite: [0, 0], budget: [30000, 30000], sens: 1.0, patience: 30, tierPref: [1.0, 1.0, 1.0, 1.0], party: 1, special: true },
 };
+
+// ---- 顧客版本的角色（計劃書 13.1） ----
+// 賽車數值：'H' 高、'N' 普通、'L' 低。倍率見 balance.js 的 CUSTOMER.STAT_STEP。
+export const CUSTOMER_CAST = ['nakagawa', 'reiko', 'honda', 'terai', 'bucho', 'matoi'];
+export const CUSTOMER_RACE_STATS = {
+  nakagawa: { accel: 'N', top: 'N', handling: 'N' },
+  reiko:    { accel: 'H', top: 'L', handling: 'N' },
+  honda:    { accel: 'N', top: 'H', handling: 'L' },
+  terai:    { accel: 'L', top: 'L', handling: 'H' },
+  bucho:    { accel: 'L', top: 'N', handling: 'H' },
+  matoi:    { accel: 'H', top: 'N', handling: 'L' },
+};
