@@ -28,6 +28,19 @@
 
 不能直接雙擊 `index.html`。瀏覽器不允許 `file://` 載入 JavaScript 模組。
 
+### 單一檔案版
+
+`dist/sushi.html` 是整個遊戲打包成的一個檔案（約 310 KB）。直接雙擊就能玩，不需要伺服器。也可以傳給別人或丟到任何靜態網站。
+
+改過程式之後要重新產生：
+
+```bash
+npm i --no-save esbuild
+node tools/build-single.mjs
+```
+
+`dist/sushi.html` 不會自動更新。開發和測試照樣用 `index.html`。
+
 手機要轉橫向。直向時會顯示轉橫的提示。
 
 ## 怎麼玩
