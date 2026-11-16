@@ -107,6 +107,68 @@ await runE2E('endless', async ({ open, check, shot }) => {
   check(s.shop.w === 10 && s.shop.h === 10, '擴建到 10×10');
   await page.waitForTimeout(300);
   await shot(page, 'p7-expanded.png');
+  // 樓層：加蓋包廂樓層和一般樓層（測試用：直接給錢和評價）
+  await page.evaluate(() => { const E0 = window.__sushi.app.scenes.top().debug.full(); E0.s.money = 50000000; E0.s.reputation = 80; E0.insp = 40; });
+  await page.waitForTimeout(300);
+  check(!(await page.locator('.floor-bar').isVisible()), '只有一樓時沒有樓層切換鈕');
+  await page.click('[data-id="build-floor-vip"]');
+  s = await S(page);
+  check(s.shop.floors.length === 2 && s.shop.floors[1].kind === 'vip', '加蓋二樓（包廂樓層）');
+  check(s.shop.furniture.filter((f) => f.type === 'booth').length === 6, '10×10 的包廂樓層有 6 間包廂');
+  check(await page.locator('.floor-btn').count() === 2, '出現樓層切換鈕');
+  check((await page.evaluate(() => window.__sushi.app.scenes.top().debug.floor())) === 1, '蓋好之後畫面切到新的樓層');
+  await page.waitForTimeout(300);
+  await shot(page, 'p7-floor-vip.png');
+  await page.click('.floor-btn[data-floor="0"]');
+  await page.waitForTimeout(300);
+  await shot(page, 'p7-floor-ghost.png');
+  check((await page.evaluate(() => window.__sushi.app.scenes.top().debug.floor())) === 0, '切回一樓（二樓淡化顯示）');
+  await page.click('[data-id="build-floor-normal"]');
+  s = await S(page);
+  check(s.shop.floors.length === 3 && s.shop.floors[2].kind === 'normal', '再加蓋三樓（一般樓層）');
+  // 在三樓擺座位：點地板
+  await page.click('[data-id="build-pick-counterSeat"]');
+  const n0 = s.shop.furniture.length;
+  for (const gx of [3, 4, 5]) { p = await at(48 + gx, 3); await page.mouse.click(p.x, p.y); }
+  s = await S(page);
+  check(s.shop.furniture.length === n0 + 3 && s.shop.furniture.slice(-3).every((f) => f.x >= 48), '在三樓點地板擺了 3 個吧台座');
+  // 包廂樓層不能擺東西
+  p = await at(24 + 0, 0); await page.mouse.click(p.x, p.y);
+  check((await S(page)).shop.furniture.length === n0 + 3, '包廂樓層的擺設是固定的');
+  await page.click('[data-id="build-cancel"]');
+  await page.waitForTimeout(200);
+  await shot(page, 'p7-floor-3f.png');
+  // 雇打工仔、訓練
+  await page.click('[data-tab="manage"]');
+  await page.click('[data-id="hire-baito1"]');
+  await page.click('[data-id="train-baito1"]');
+  s = await S(page);
+  check(s.staff.some((x) => x.id === 'baito1' && x.lv === 1), '雇用打工仔並訓練到 Lv1');
+  check(await page.locator('[data-id="hire-baito2"]').count() === 1, '雇了一位之後可以再雇下一位');
+  // 三層樓的店跑一天：包廂和三樓都有客人
+  await page.click('[data-tab="staff"]');
+  await page.click('[data-id="role-baito1-floor"]');
+  const day = await page.evaluate(() => {
+    const W = window.__sushi;
+    for (const id of Object.keys(W.state().menu)) W.act({ type: 'buy', item: id, grade: 'premium', qty: 30 });
+    W.act({ type: 'open' });
+    let vip = 0; let up = 0; let lift = 0;
+    for (let i = 0; i < 300 && W.state().phase === 'open'; i++) {
+      W.step(16);
+      const st = W.state();
+      vip = Math.max(vip, st.customers.filter((c) => c.type === 'vip' && c.st === 'eat').length);
+      up = Math.max(up, st.customers.filter((c) => c.gx >= 48 && c.st === 'eat').length);
+      lift += st.orders.filter((o) => o.st === 'lift').length;
+    }
+    return { vip, up, lift, phase: W.state().phase };
+  });
+  check(day.vip > 0, `包廂有客人在吃（同時最多 ${day.vip} 人）`);
+  check(day.up > 0, `三樓有客人在吃（同時最多 ${day.up} 人）`);
+  check(day.lift > 0, '送餐軌道有在送');
+  await waitScene(page, 'results');
+  await page.click('button[data-id="next-day"]');
+  await waitScene(page, 'endless');
+  check((await S(page)).shop.floors.length === 3, '隔天樓層還在');
   // 暫停選單：存檔並回主選單
   await page.keyboard.press('Escape');
   await waitScene(page, 'pause');

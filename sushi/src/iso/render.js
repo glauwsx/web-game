@@ -62,11 +62,11 @@ function buildBackground(shop) {
     const w = gridToWorld(gx, gy, z);
     drawSprite(ctx, getSprite(name), ox + w.x, oy + w.y);
   };
-  // 店外地面
+  // 店外地面（樓上的樓層不畫街道）
   const lo = -OUTSIDE;
   const W = shop.w + OUTSIDE;
   const H = shop.h + OUTSIDE;
-  for (let s = lo * 2; s <= W + H - 2; s++) {
+  for (let s = lo * 2; !shop.upper && s <= W + H - 2; s++) {
     for (let gx = lo; gx < W; gx++) {
       const gy = s - gx;
       if (gy < lo || gy >= H) continue;
@@ -75,7 +75,7 @@ function buildBackground(shop) {
     }
   }
   // 後方的鄰居房屋和電線桿
-  if (shop.scenery !== false) {
+  if (shop.scenery !== false && !shop.upper) {
     put('scene.houseB', -4.2, Math.max(0, shop.h * 0.2));
     put('scene.houseA', Math.max(0, shop.w * 0.35), -4.2);
     put('scene.houseC', shop.w + 0.6, -3.6);
@@ -106,7 +106,7 @@ function buildBackground(shop) {
 }
 
 function background(shop) {
-  const key = `${shop.w}x${shop.h}|${typeof shop.floor === 'function' ? shop.floorKey || 'fn' : shop.floor}|${shop.door ? shop.door.gx : ''}|${shop.wall || ''}|${shop.scenery === false ? 0 : 1}`;
+  const key = `${shop.w}x${shop.h}|${typeof shop.floor === 'function' ? shop.floorKey || 'fn' : shop.floor}|${shop.door ? shop.door.gx : ''}|${shop.wall || ''}|${shop.scenery === false ? 0 : 1}|${shop.upper ? 'u' : ''}`;
   let bg = bgCache.get(key);
   if (!bg) {
     if (bgCache.size > 6) bgCache.clear();
@@ -161,8 +161,8 @@ export function drawScene(ctx, cam, shop, items, opts = {}) {
     if (it.kind === 'furn') {
       const w = gridToWorld(it.x, it.y);
       it.sx = w.x; it.sy = w.y;
-      if (it.ghost) ctx.globalAlpha = 0.6;
-      drawSprite(ctx, getSprite(it.sprite || `furn.${it.type}`), w.x, w.y);
+      if (it.ghost) ctx.globalAlpha = it.alpha || 0.6;
+      drawSprite(ctx, getSprite(it.sprite || `furn.${it.type}`), w.x, w.y - (it.dz || 0));
       if (it.ghost) ctx.globalAlpha = 1;
       if (it.draw) it.draw(ctx, w.x, w.y);
     } else if (it.kind === 'actor') {

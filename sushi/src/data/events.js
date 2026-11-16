@@ -40,7 +40,7 @@ export const RANDOM_EVENTS = [
  * 夏春都的任務。照順序出現，一次顯示 3 個。
  * kind 和 n 是條件；reward 是 { money } 或 { insp }。
  *   dayRevenue：單日營業額。dayServed：單日服務人數。own：擁有幾件某種家具（type）。
- *   reputation：評價。size：店面等級。staff：員工人數（含阿兩）。sushi：解鎖幾種壽司。
+ *   reputation：評價。size：店面等級。floors：樓層數。staff：員工人數（含阿兩）。sushi：解鎖幾種壽司。
  *   counter：累計次數（key）。repStreak：連續幾天評價不下降。cleanDay：服務 n 人以上而且生氣離開的不超過 2 人。
  */
 export const QUESTS = [
@@ -70,7 +70,10 @@ export const QUESTS = [
   { id: 'served3', kind: 'dayServed', n: 200, reward: { insp: 10 } },
   { id: 'rev3', kind: 'dayRevenue', n: 300000, reward: { money: 300000 } },
   { id: 'rep4', kind: 'reputation', n: 90, reward: { money: 300000 } },
+  { id: 'floor2', kind: 'floors', n: 2, reward: { insp: 10 } },
   { id: 'size4', kind: 'size', n: 4, reward: { money: 500000 } },
+  { id: 'floor3', kind: 'floors', n: 3, reward: { money: 300000 } },
+  { id: 'floor5', kind: 'floors', n: 5, reward: { money: 1000000 } },
 ];
 
 export const QUESTS_SHOWN = 3;

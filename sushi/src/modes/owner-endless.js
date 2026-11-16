@@ -13,6 +13,7 @@ import {
   validEndless, boardsUnlocked, tracksUnlocked, ENDLESS_VERSION,
 } from '../sim/endless.js';
 import { machineOf } from '../sim/machines.js';
+import { floorCount } from '../sim/pathfind.js';
 import { createShopScene } from './shop-scene.js';
 import './machines-ui.js';
 import { createBuilder } from '../ui/build.js';
@@ -119,11 +120,29 @@ function manageTab(ctx) {
       }
       // 雇用
       el.appendChild(head(t('manage.hire')));
+      el.appendChild(h('div', { class: 'panel-note' }, t('manage.train.note')));
+      // 打工仔很多位：已經雇用的都列出來，還沒雇的只列下一位
+      let nextBaito = true;
       for (const id of STAFF_ORDER) {
         const def = STAFF[id];
-        if (def.player) continue;
-        const st0 = hireStatus(E, id);
+        const st0 = def.player ? 'hired' : hireStatus(E, id);
         const hired = st0 === 'hired';
+        if (def.baito && !hired) { if (!nextBaito) continue; nextBaito = false; }
+        const train = h('button', { class: 'btn plain mini', dataset: { id: `train-${id}` }, onclick: () => ctx.act({ type: 'train', staff: id }) }, '');
+        if (hired) {
+          ups.push(() => {
+            const cur = ctx.E().s.staff.find((x) => x.id === id);
+            const lv = cur ? cur.lv || 0 : 0;
+            const max = lv >= B.TRAIN.MAX;
+            train.textContent = max ? t('manage.train.max', { lv }) : t('manage.train', { lv, next: lv + 1, n: B.TRAIN.COST[lv] });
+            train.disabled = !prep || max || ctx.E().insp < B.TRAIN.COST[lv];
+          });
+        }
+        if (def.player) {
+          el.appendChild(h('div', { class: 'row staff-row' }, portraitImg(def.look, 2),
+            h('div', { class: 'row-main' }, h('div', { class: 'row-name' }, t(`char.${id}`))), h('div', { class: 'row-ctl' }, train)));
+          continue;
+        }
         const btn = h('button', {
           class: 'btn plain mini', dataset: { id: `${hired ? 'fire' : 'hire'}-${id}` },
           onclick: () => ctx.act({ type: hired ? 'fire' : 'hire', staff: id }),
@@ -134,7 +153,7 @@ function manageTab(ctx) {
             h('div', { class: 'row-name' }, t(`char.${id}`), def.lang ? h('small', null, ` ${t('panel.staff.lang')}`) : null),
             h('div', { class: 'row-sub' }, `${t('panel.staff.speed')} ${def.speed} · ${t('panel.staff.skill')} ${def.skill} · ${t('panel.staff.service')} ${def.service}`),
             h('div', { class: 'row-sub' }, t('manage.hire.wage', { w: num(def.wage) }), N.HIRE_REP[id] ? `　${t('manage.hire.rep', { n: N.HIRE_REP[id] })}` : '')),
-          h('div', { class: 'row-ctl' }, btn)));
+          h('div', { class: 'row-ctl roles' }, hired ? train : null, btn)));
         ups.push(() => { btn.disabled = !prep || (!hired && hireStatus(ctx.E(), id) !== 'ok'); });
       }
       // 機台選項（解鎖第 2 個檯面或賽道之後）
@@ -204,6 +223,8 @@ export function startEndless(app, E) {
     save: () => saveEndless(app, E),
     notify: (text) => toast(text, 1600),
     onShopChanged: () => { scene.state = E.s; },
+    setFloor: (k) => scene.setFloor(k),
+    viewFloor: () => scene.getFloor(),
   };
   const builder = createBuilder(ctx);
   const leave = () => app.go('owner');
@@ -229,12 +250,12 @@ export function startEndless(app, E) {
       // 開店前先存檔：營業中離開的話，回來從今天的準備階段開始
       if (action.type === 'open' && E.s.phase === 'prep') { builder.cancel(); saveEndless(app, E); }
       const r = applyEndless(E, action);
-      if (r.ok && ['place', 'move', 'sell', 'hire', 'fire', 'research', 'borrow', 'repay', 'setBoard', 'setTrack'].includes(action.type)) saveEndless(app, E);
+      if (r.ok && ['place', 'move', 'sell', 'hire', 'fire', 'research', 'borrow', 'repay', 'setBoard', 'setTrack', 'addFloor', 'train', 'expand'].includes(action.type)) saveEndless(app, E);
       return r;
     },
     bars: () => ({ rival: Math.round(E.month.rival / 28), name: t('hud.rivalDaily') }),
     extraTabs: [builder.tab, manageTab(ctx)],
-    structKey: () => [E.day, E.research.length, E.questsDone.length, E.s.staff.length, E.size, builder.key(), E.s.shop.furniture.length, boardsUnlocked(E), tracksUnlocked(E)].join('.'),
+    structKey: () => [E.day, floorCount(E.s.shop), E.research.length, E.questsDone.length, E.s.staff.length, E.size, builder.key(), E.s.shop.furniture.length, boardsUnlocked(E), tracksUnlocked(E)].join('.'),
     overlayDraw: (c) => builder.overlayDraw(c),
     onPick: (grid) => builder.onPick(grid),
     onHover: (grid) => builder.onHover(grid),

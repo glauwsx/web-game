@@ -240,7 +240,39 @@ function doorFrame() {
   return isoSprite(ic);
 }
 
+// 包廂 2×2：屏風圍起來的矮桌，坐墊是紫色
+function booth() {
+  const ic = isoCanvas(2, 2, 26);
+  // 後面兩片屏風
+  isoBox(ic, 0, 0, 0, 2, 0.08, 24, 'a', 'Y', 'b');
+  isoBox(ic, 0, 0, 0, 0.08, 2, 24, 'Y', 'a', 'b');
+  const cushion = (u, v) => isoBox(ic, u - 0.24, v - 0.24, 0, u + 0.24, v + 0.24, 5, 'V', 'v', 'v');
+  cushion(0.5, 0.5);
+  cushion(1.55, 0.5);
+  cushion(0.5, 1.55);
+  isoBox(ic, 0.9, 0.9, 0, 1.1, 1.1, 8, null, 'a', 'a');
+  isoBox(ic, 0.55, 0.55, 8, 1.45, 1.45, 10, 'k', 'K', 'K'); // 黑漆桌面
+  const [sx, sy] = at(ic, 1.0, 0.85, 10);
+  rect(ic.g, sx, sy - 3, 2, 3, 'r'); set(ic.g, sx, sy - 4, 'y');
+  const [tx, ty] = at(ic, 0.8, 1.15, 10);
+  rect(ic.g, tx, ty - 2, 3, 2, 'w');
+  cushion(1.55, 1.55);
+  return isoSprite(ic);
+}
+
+// 樓梯 2×1：左邊往上（幾階踏板），右邊往下（地板上的開口）
+function stairs() {
+  const ic = isoCanvas(2, 1, 12);
+  for (let i = 0; i < 4; i++) isoBox(ic, 0.05, 0.1 + i * 0.2, 0, 0.95, 0.3 + i * 0.2, 10 - i * 3 + 1, 'c', 'b', 'a');
+  isoFlat(ic, 1.05, 0.08, 1.95, 0.92, 0.5, 'k');
+  isoFlat(ic, 1.15, 0.5, 1.85, 0.9, 0.6, 'a');
+  isoFlat(ic, 1.15, 0.7, 1.85, 0.9, 0.7, 'b');
+  return isoSprite(ic);
+}
+
 export const FURNITURE_SPRITES = {
+  'furn.booth': booth(),
+  'furn.stairs': stairs(),
   'furn.chefStation': chefStation(),
   'furn.counterSeat': counterSeat(),
   'furn.tableSet': tableSet(),

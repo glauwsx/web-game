@@ -10,8 +10,8 @@ import { buchoAround, lemonExpected } from './bosses.js';
 import { machineOf, bossesNeedingChoice } from './machines.js';
 import { FURNITURE } from '../data/furniture.js';
 import { RESEARCH } from '../data/events.js';
-import { canPlace, rectDistance } from './pathfind.js';
-import { applyEndless, endDay, researchStatus, buildable } from './endless.js';
+import { canPlace, rectDistance, floorCount } from './pathfind.js';
+import { applyEndless, endDay, researchStatus, buildable, floorOffer } from './endless.js';
 
 /** good：準備階段的設定。 */
 function goodPrep(state) {
@@ -180,6 +180,18 @@ export function endlessPrepActions(E) {
   for (const step of steps) { if (step()) return acts; }
   const next = B.ENDLESS.SIZES[E.size + 1];
   if (next && s.reputation >= next.rep && s.money >= next.price + B.BOT.ENDLESS_RESERVE * 2) return [{ type: 'expand' }];
+  // 加蓋：包廂樓層不用自己擺設。人手跟著加：每多一層雇一位打工仔當師傅（有空的板前檯才當得成）
+  const offer = floorOffer(E, 'vip');
+  if (floorCount(s.shop) < B.BOT.ENDLESS_FLOORS && s.reputation >= offer.rep && s.money >= offer.price + B.BOT.ENDLESS_RESERVE * 2) return [{ type: 'addFloor', kind: 'vip' }];
+  if (floorCount(s.shop) > 1) {
+    if (own('chefStation') < 1 + floorCount(s.shop) && build('chefStation', true)) return acts;
+    const baito = `baito${own('chefStation') - 2}`;
+    if (own('chefStation') > 2 && STAFF[baito] && !hired(baito)) return [{ type: 'hire', staff: baito }];
+  }
+  // 靈感點用不完就拿來訓練
+  if (RESEARCH.every((r) => researchStatus(E, r) === 'done')) {
+    for (const st of s.staff) { const lv = st.lv || 0; if (lv < B.TRAIN.MAX && E.insp >= B.TRAIN.COST[lv]) return [{ type: 'train', staff: st.id }]; }
+  }
   return acts;
 }
 

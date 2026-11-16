@@ -4,7 +4,7 @@ import { SUSHI, QUALITY, gradeOfMode } from '../data/sushi.js';
 import { FURNITURE } from '../data/furniture.js';
 import { STAFF, CUSTOMER_TYPES } from '../data/characters.js';
 import { rngChance } from '../core/rng.js';
-import { rectDistance } from './pathfind.js';
+import { rectDistance, floorOfX } from './pathfind.js';
 import { addReputation, pushFeed, customerRef } from './economy.js';
 
 export function findOrder(state, id) {
@@ -57,10 +57,23 @@ export function removeOrder(state, order) {
   if (i >= 0) state.orders.splice(i, 1);
 }
 
-/** 佇列裡最早的一張還沒人做的訂單。 */
-export function nextQueuedOrder(state) {
-  for (const o of state.orders) if (o.st === 'queued') return o;
-  return null;
+/**
+ * 佇列裡最早的一張還沒人做的訂單。
+ * 有給師傅而且店有好幾層樓時：先做同一層樓的（可以直接遞），沒有才做別層的。
+ */
+export function nextQueuedOrder(state, chef = null) {
+  let first = null;
+  const multi = chef && state.shop.floors && state.shop.floors.length > 1;
+  const station = multi ? findFurniture(state, chef.station) : null;
+  for (const o of state.orders) {
+    if (o.st !== 'queued') continue;
+    if (!station) return o;
+    if (!first) first = o;
+    const c = findCustomer(state, o.cid);
+    const seat = c && findFurniture(state, c.furn);
+    if (seat && floorOfX(seat.x) === floorOfX(station.x)) return o;
+  }
+  return first;
 }
 
 /**
@@ -100,6 +113,8 @@ export function decideDelivery(state, order, chef) {
   const seat = c && findFurniture(state, c.furn);
   if (!c || !station || !seat) return { how: 'none' };
   const fd = FURNITURE[seat.type];
+  // 包廂，或座位跟師傅不在同一層樓：走送餐軌道
+  if (fd.vip || floorOfX(seat.x) !== floorOfX(station.x)) return { how: 'lift' };
   // 座位離任何一座板前檯夠近就可以直接遞（板前檯並排時，師傅之間會互相傳）
   for (const st of state.shop.furniture) {
     if (st.type !== 'chefStation') continue;
@@ -134,7 +149,7 @@ export function servePiece(state, c, order, server) {
   }
   // 價格
   if (!order.prize) {
-    const ratio = order.price / customerRef(item, order.mode);
+    const ratio = order.price / (customerRef(item, order.mode) * (c.vip ? B.VIP.PRICE_MULT : 1));
     if (ratio > 1) {
       c.sat += Math.floor((ratio - 1) * 10 + 1e-9) * B.SAT_PRICE_OVER_PER_10;
       if (ratio > B.PRICEY_RATIO) setThought(state, c, 'pricey');

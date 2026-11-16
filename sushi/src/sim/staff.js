@@ -18,7 +18,7 @@ export function kufuActive(state) {
 
 /** 目前的捏製速度（含真工夫和變裝的影響）。 */
 export function effSpeed(state, s) {
-  let v = STAFF[s.id].speed;
+  let v = STAFF[s.id].speed + (s.lv || 0) * B.TRAIN.SPEED;
   if (STAFF[s.id].player) {
     if (kufuActive(state)) v *= B.KUFU_SPEED_MULT;
     if (s.disguised) v *= B.DISGUISE_SPEED_MULT;
@@ -28,9 +28,14 @@ export function effSpeed(state, s) {
 
 /** 目前的技術。 */
 export function effSkill(state, s) {
-  let v = STAFF[s.id].skill;
+  let v = STAFF[s.id].skill + Math.floor((s.lv || 0) / B.TRAIN.SKILL_EVERY);
   if (STAFF[s.id].player && kufuActive(state)) v += B.KUFU_SKILL_ADD;
   return v;
+}
+
+/** 走路速度（含訓練的加成）。 */
+export function walkSpeed(s) {
+  return B.STAFF_SPEED[STAFF[s.id].walk] * (1 + (s.lv || 0) * B.TRAIN.WALK);
 }
 
 /** 做一貫要幾個 tick：製作時間 × 10 / (5 + 捏製速度)。 */
@@ -219,6 +224,12 @@ function dispatch(state, chef, order, layout) {
     servePiece(state, c, order, chef);
     return;
   }
+  if (d.how === 'lift') {
+    // 送餐軌道：過一段時間直接送到座位，不用人送
+    order.st = 'lift';
+    order.liftAt = state.tick + B.LIFT_MIN * B.TICKS_PER_MIN;
+    return;
+  }
   if (d.how === 'floor') {
     if (d.staff && giveToFloor(state, d.staff, order, layout)) return;
     order.orphan = true; // 先放在檯面上，等外場員工有空來拿
@@ -238,7 +249,7 @@ function dispatch(state, chef, order, layout) {
 
 function stepChef(state, s, layout) {
   if (s.path.length) {
-    const arrived = advance(s, B.STAFF_SPEED[STAFF[s.id].walk]);
+    const arrived = advance(s, walkSpeed(s));
     if (!arrived) return;
     if (s.walk && s.walk.kind === 'deliver') {
       const order = s.task && findOrder(state, s.task.orders[0]);
@@ -267,7 +278,7 @@ function stepChef(state, s, layout) {
     if (order.left <= 0) finishMaking(state, s, order, layout);
     return;
   }
-  const order = nextQueuedOrder(state);
+  const order = nextQueuedOrder(state, s);
   if (order) {
     order.st = 'making';
     order.chef = s.id;
@@ -278,7 +289,7 @@ function stepChef(state, s, layout) {
 
 function stepFloor(state, s, layout) {
   if (s.path.length) {
-    if (!advance(s, B.STAFF_SPEED[STAFF[s.id].walk])) return;
+    if (!advance(s, walkSpeed(s))) return;
     s.walk = null;
     s.ready = true;
   }
@@ -323,8 +334,19 @@ function stepFloor(state, s, layout) {
 }
 
 /** 所有員工前進一個 tick。 */
+/** 送餐軌道上的壽司：時間到了就送到顧客手上。 */
+function stepLift(state) {
+  for (let i = state.orders.length - 1; i >= 0; i--) {
+    const o = state.orders[i];
+    if (o.st !== 'lift' || o.liftAt > state.tick) continue;
+    const c = findCustomer(state, o.cid);
+    if (c) servePiece(state, c, o, null); else removeOrder(state, o);
+  }
+}
+
 export function stepStaff(state) {
   const layout = getLayout(state.shop);
+  stepLift(state);
   for (const s of state.staff) {
     s.pgx = s.gx; s.pgy = s.gy;
     if (s.gone > 0) {

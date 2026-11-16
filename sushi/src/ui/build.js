@@ -5,7 +5,8 @@ import { t } from '../data/strings.js';
 import * as B from '../data/balance.js';
 import { FURNITURE } from '../data/furniture.js';
 import { canPlace } from '../sim/pathfind.js';
-import { buildable, rentOf } from '../sim/endless.js';
+import { buildable, rentOf, floorOffer, boothSpots, floorKind } from '../sim/endless.js';
+import { floorCount, FLOOR_STRIDE } from '../sim/pathfind.js';
 import { getSprite, spriteDataURL } from '../iso/sprites.js';
 import { strokeCell, fillCell } from '../iso/render.js';
 import { yen } from './hud.js';
@@ -14,7 +15,8 @@ const OK_FILL = 'rgba(120, 220, 110, 0.45)';
 const BAD_FILL = 'rgba(230, 70, 60, 0.45)';
 
 /**
- * env = { E()（無限模式狀態）, act(action)（失敗會自己顯示原因）, notify(text), onShopChanged() }
+ * env = { E()（無限模式狀態）, act(action)（失敗會自己顯示原因）, notify(text), onShopChanged(), setFloor(k) }
+ * 格子座標都是整張大格子的座標（含樓層的位移）。
  * 回傳 { tab, overlayDraw, onPick, onHover, key(), cancel() }
  */
 export function createBuilder(env) {
@@ -79,8 +81,39 @@ export function createBuilder(env) {
         cur),
       next ? h('div', { class: 'row-ctl' }, expBtn) : null));
 
+    // 樓層
+    const floorHead = h('div', { class: 'panel-head' }, '');
+    el.appendChild(floorHead);
+    el.appendChild(h('div', { class: 'panel-note' }, t('build.floor.note', { m: B.LIFT_MIN })));
+    const floorRows = ['normal', 'vip'].map((kind) => {
+      const name = h('div', { class: 'row-name' }, '');
+      const need = h('div', { class: 'row-sub' }, '');
+      const desc = h('div', { class: 'row-sub' }, '');
+      const btn = h('button', {
+        class: 'btn red', dataset: { id: `build-floor-${kind}` },
+        onclick: () => {
+          const r = env.act({ type: 'addFloor', kind });
+          if (r.ok) { env.notify(t('build.floor.built', { n: r.floor + 1 })); env.onShopChanged(); env.setFloor(r.floor); }
+        },
+      }, t('build.floor.go'));
+      el.appendChild(h('div', { class: 'row' }, h('div', { class: 'row-main' }, name, desc, need), h('div', { class: 'row-ctl' }, btn)));
+      return { kind, name, need, desc, btn };
+    });
+    const floorList = h('div', { class: 'row-sub floor-list' }, '');
+    el.appendChild(floorList);
+
     function refresh() {
       const s = env.E().s;
+      const nFloors = floorCount(s.shop);
+      floorHead.textContent = t('build.floors', { n: nFloors });
+      floorList.textContent = Array.from({ length: nFloors }, (_, k) => `${t('floor.name', { n: k + 1 })} ${t(`floor.kind.${floorKind(s.shop, k)}`)}`).join('　');
+      for (const fr of floorRows) {
+        const offer = floorOffer(env.E(), fr.kind);
+        fr.name.textContent = t(`build.floor.${fr.kind}`, { n: offer.floor });
+        fr.desc.textContent = t(`build.floor.${fr.kind}.desc`, { k: boothSpots(s.shop).length });
+        fr.need.textContent = t('build.floor.need', { price: offer.price.toLocaleString('en-US'), rep: offer.rep });
+        fr.btn.disabled = !prep() || s.money < offer.price || s.reputation < offer.rep;
+      }
       const open = !prep();
       if (open) mode = null;
       note.textContent = noteText();
@@ -138,7 +171,8 @@ export function createBuilder(env) {
     overlayDraw(ctx) {
       if (!mode || !prep()) return;
       const s = shop();
-      strokeCell(ctx, 0, 0, s.w, s.h, 'rgba(255, 244, 220, 0.5)');
+      const fx = env.viewFloor() * FLOOR_STRIDE;
+      strokeCell(ctx, fx, 0, s.w, s.h, 'rgba(255, 244, 220, 0.5)');
       const moving = mode.kind === 'move' && mode.id ? s.furniture.find((f) => f.id === mode.id) : null;
       if (moving) { const d = FURNITURE[moving.type]; strokeCell(ctx, moving.x, moving.y, d.w, d.h, '#f2c94c'); }
       if (!hover) return;

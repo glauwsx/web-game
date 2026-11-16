@@ -4,12 +4,54 @@ import { FURNITURE } from '../data/furniture.js';
 /** 兩個格子的鍵。 */
 const key = (x, y, w) => y * w + x;
 
+// ---- 樓層（無限模式） ----
+// 每層樓放在同一張大格子的不同區段：第 k 層（0 = 一樓）的格子 x 座標是「樓層內的 x + k × FLOOR_STRIDE」。
+// 區段之間的空格擋住不能走。樓梯把相鄰兩層的兩個格子連起來。這樣尋路、顧客、員工都不用知道樓層。
+export const FLOOR_STRIDE = 24;
+
+export function floorCount(shop) {
+  return shop.floors ? shop.floors.length : 1;
+}
+
+/** 格子的 x 座標在第幾層。 */
+export function floorOfX(x) {
+  return Math.floor(x / FLOOR_STRIDE);
+}
+
+/** 樓層內的 x 座標。 */
+export function localX(x) {
+  return x - floorOfX(x) * FLOOR_STRIDE;
+}
+
+/** 整張大格子的寬度。 */
+export function totalWidth(shop) {
+  return (floorCount(shop) - 1) * FLOOR_STRIDE + shop.w;
+}
+
+/** 這一格在不在店裡（某一層樓的地板上）。 */
+export function insideShop(shop, x, y) {
+  if (x < 0 || y < 0 || y >= shop.h) return false;
+  return floorOfX(x) < floorCount(shop) && localX(x) < shop.w;
+}
+
+/** 樓梯的位置：每層樓左前角的兩格。左邊那格往上，右邊那格往下。 */
+export function stairCell(shop, floor, up) {
+  return [floor * FLOOR_STRIDE + (up ? 0 : 1), shop.h - 1];
+}
+
+/** 樓梯連起來的格子對：[[下層往上的格子], [上層往下的格子]]。 */
+export function stairLinks(shop) {
+  const out = [];
+  for (let k = 0; k + 1 < floorCount(shop); k++) out.push([stairCell(shop, k, true), stairCell(shop, k + 1, false)]);
+  return out;
+}
+
 /**
  * 廣度優先搜尋最短路。
  * blocked 是長度 w*h 的陣列（1 = 擋住）。from、to 是 [x, y]。
  * 回傳從 from 的下一格到 to 的格子清單；from 等於 to 回傳 []；走不到回傳 null。
  */
-export function findPath(blocked, w, h, from, to) {
+export function findPath(blocked, w, h, from, to, links = null) {
   const [fx, fy] = from;
   const [tx, ty] = to;
   if (fx < 0 || fy < 0 || fx >= w || fy >= h || tx < 0 || ty < 0 || tx >= w || ty >= h) return null;
@@ -27,6 +69,7 @@ export function findPath(blocked, w, h, from, to) {
     const cy = (cur - cx) / w;
     // 鄰居的順序固定，結果才會是決定性的
     const nb = [[cx + 1, cy], [cx, cy + 1], [cx - 1, cy], [cx, cy - 1]];
+    if (links && links[cur] !== undefined) nb.push([links[cur] % w, Math.floor(links[cur] / w)]);
     for (const [nx, ny] of nb) {
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const nk = key(nx, ny, w);
@@ -42,7 +85,7 @@ export function findPath(blocked, w, h, from, to) {
 }
 
 /** 從 start 出發能走到的所有格子。回傳長度 w*h 的陣列（−1 = 走不到，其他 = 步數）。 */
-export function floodFill(blocked, w, h, start) {
+export function floodFill(blocked, w, h, start, links = null) {
   const dist = new Array(w * h).fill(-1);
   const [sx, sy] = start;
   if (sx < 0 || sy < 0 || sx >= w || sy >= h || blocked[key(sx, sy, w)]) return dist;
@@ -52,7 +95,9 @@ export function floodFill(blocked, w, h, start) {
     const cur = queue[qi];
     const cx = cur % w;
     const cy = (cur - cx) / w;
-    for (const [nx, ny] of [[cx + 1, cy], [cx, cy + 1], [cx - 1, cy], [cx, cy - 1]]) {
+    const nb = [[cx + 1, cy], [cx, cy + 1], [cx - 1, cy], [cx, cy - 1]];
+    if (links && links[cur] !== undefined) nb.push([links[cur] % w, Math.floor(links[cur] / w)]);
+    for (const [nx, ny] of nb) {
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const nk = key(nx, ny, w);
       if (dist[nk] !== -1 || blocked[nk]) continue;
@@ -84,15 +129,26 @@ export function reserveCells(f) {
  * access['家具id:位置編號'] = 可以用的進出格 [x, y]，或 null（走不到）。
  */
 export function computeLayout(shop) {
-  const { w, h } = shop;
+  const w = totalWidth(shop);
+  const h = shop.h;
   const blocked = new Array(w * h).fill(0);
+  if (floorCount(shop) > 1) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!insideShop(shop, x, y)) blocked[key(x, y, w)] = 1;
+  }
   for (const f of shop.furniture) {
+    if (FURNITURE[f.type].walk) continue; // 樓梯可以踩
     for (const [x, y] of footprintCells(f)) {
       if (x >= 0 && y >= 0 && x < w && y < h) blocked[key(x, y, w)] = 1;
     }
   }
+  let links = null;
+  for (const [a, b] of stairLinks(shop)) {
+    if (!links) links = {};
+    links[key(a[0], a[1], w)] = key(b[0], b[1], w);
+    links[key(b[0], b[1], w)] = key(a[0], a[1], w);
+  }
   const door = [shop.door.gx, h - 1];
-  const dist = floodFill(blocked, w, h, door);
+  const dist = floodFill(blocked, w, h, door, links);
   const access = {};
   for (const f of shop.furniture) {
     const def = FURNITURE[f.type];
@@ -109,7 +165,7 @@ export function computeLayout(shop) {
       access[`${f.id}:${i}`] = best;
     });
   }
-  return { w, h, blocked, dist, door, access };
+  return { w, h, blocked, dist, door, access, links };
 }
 
 // 格局資訊的快取。鍵是 shop 物件本身；shop.ver 改變時重算。
@@ -126,7 +182,7 @@ export function getLayout(shop) {
 
 /** 在店內從格子 a 走到格子 b 的路徑（格子中心的座標清單）。走不到回傳 null。 */
 export function pathBetween(layout, a, b) {
-  const cells = findPath(layout.blocked, layout.w, layout.h, a, b);
+  const cells = findPath(layout.blocked, layout.w, layout.h, a, b, layout.links);
   if (!cells) return null;
   return cells.map(([x, y]) => [x + 0.5, y + 0.5]);
 }
@@ -145,7 +201,7 @@ export function canPlace(shop, type, x, y, ignoreId = null) {
   const mine = footprintCells(cand);
   const myReserve = reserveCells(cand);
   for (const [cx, cy] of mine.concat(myReserve)) {
-    if (cx < 0 || cy < 0 || cx >= shop.w || cy >= shop.h) return { ok: false, reason: 'outside' };
+    if (!insideShop(shop, cx, cy)) return { ok: false, reason: 'outside' };
   }
   const occupied = new Set();
   const reserved = new Set();
@@ -223,6 +279,12 @@ export function advance(a, speed) {
     const dx = tx - a.gx;
     const dy = ty - a.gy;
     const d = Math.hypot(dx, dy);
+    // 走樓梯：下一個點在另一層樓，直接換過去
+    if (Math.abs(dx) > FLOOR_STRIDE - 2) {
+      a.gx = tx; a.gy = ty;
+      a.path.shift();
+      continue;
+    }
     if (d > 1e-9) { a.fx = dx; a.fy = dy; }
     if (d <= left) {
       a.gx = tx; a.gy = ty;

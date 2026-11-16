@@ -10,7 +10,7 @@ import { TRACK_ORDER } from '../data/tracks.js';
 import { RESEARCH, BUILD_BASE, RANDOM_EVENTS, QUESTS, QUESTS_SHOWN } from '../data/events.js';
 import { rngCreate, rngChance, rngRange, rngInt } from '../core/rng.js';
 import { createShopState, applyAction, addFurniture, addStaff, resetDay } from './shop.js';
-import { canPlace } from './pathfind.js';
+import { canPlace, floorCount, floorOfX, stairCell, FLOOR_STRIDE } from './pathfind.js';
 import { setRole } from './staff.js';
 import { addReputation } from './economy.js';
 import { scheduleEvents } from './bosses.js';
@@ -33,8 +33,58 @@ export function calendar(day) {
   };
 }
 
+/** 每日租金：照全部樓層的總面積算。 */
 export function rentOf(shop) {
-  return N.RENT_BASE + shop.w * shop.h * N.RENT_PER_CELL;
+  return N.RENT_BASE + shop.w * shop.h * floorCount(shop) * N.RENT_PER_CELL;
+}
+
+/** 來客的基本值：店面越大、樓層越多，來客越多。 */
+export function arrivalOf(E) {
+  return N.SIZES[E.size].arrival * (1 + B.FLOORS.ARRIVAL_BONUS * (floorCount(E.s.shop) - 1));
+}
+
+// ---- 樓層 ----
+
+/** 蓋下一層樓的條件。kind：'normal'（自由擺設）或 'vip'（包廂樓層）。 */
+export function floorOffer(E, kind = 'normal') {
+  const n = floorCount(E.s.shop); // 現有幾層，新的一層是第 n + 1 層
+  const price = Math.round(B.FLOORS.PRICE * B.FLOORS.PRICE_GROWTH ** (n - 1) * (kind === 'vip' ? B.FLOORS.VIP_MULT : 1) / 10000) * 10000;
+  return { floor: n + 1, price, rep: Math.min(B.FLOORS.REP_MAX, B.FLOORS.REP + B.FLOORS.REP_STEP * (n - 1)) };
+}
+
+export function floorKind(shop, k) {
+  return shop.floors && shop.floors[k] ? shop.floors[k].kind : 'normal';
+}
+
+/** 包廂樓層的包廂位置（樓層內的座標）。每 3 格一間，留走道，最前面兩排留給樓梯。 */
+export function boothSpots(shop) {
+  const out = [];
+  for (let y = 1; y + 2 <= shop.h - 2; y += 3) {
+    for (let x = 1; x + 2 <= shop.w; x += 3) out.push([x, y]);
+  }
+  return out;
+}
+
+function fillBooths(s, k) {
+  s.shop.furniture = s.shop.furniture.filter((f) => !(f.type === 'booth' && floorOfX(f.x) === k));
+  for (const [x, y] of boothSpots(s.shop)) addFurniture(s, 'booth', k * FLOOR_STRIDE + x, y);
+}
+
+/** 把每層樓的樓梯放到左前角（擴建之後位置會變）。 */
+function placeStairs(s) {
+  s.shop.furniture = s.shop.furniture.filter((f) => f.type !== 'stairs');
+  if (floorCount(s.shop) < 2) return;
+  for (let k = 0; k < floorCount(s.shop); k++) addFurniture(s, 'stairs', k * FLOOR_STRIDE, s.shop.h - 1);
+}
+
+/** 樓梯要用的兩格現在是不是空的。 */
+function stairsFree(shop, k) {
+  const cells = [stairCell(shop, k, true), stairCell(shop, k, false)];
+  return !shop.furniture.some((f) => {
+    if (f.type === 'stairs') return false;
+    const d = FURNITURE[f.type];
+    return cells.some(([x, y]) => x >= f.x && x < f.x + d.w && y >= f.y && y < f.y + d.h);
+  });
 }
 
 function daySeed(E) {
@@ -122,8 +172,8 @@ export function rollDay(E) {
   s.priceMult = event && event.price ? event.price : 1;
   s.arrivalMult = (cal.weekend ? N.WEEKEND_MULT : 1) * (event && event.arrival ? event.arrival : 1);
   s.mixMult = event && event.mix ? { ...event.mix } : null;
-  s.baseArrival = N.SIZES[E.size].arrival;
-  s.mix = { ...N.MIX, gourmet: s.reputation >= N.GOURMET_REP ? N.GOURMET_WEIGHT : 0 };
+  s.baseArrival = arrivalOf(E);
+  s.mix = { ...N.MIX, gourmet: s.reputation >= N.GOURMET_REP ? N.GOURMET_WEIGHT : 0, vip: B.VIP.MIX_PER_BOOTH };
   s.events = scheduleEvents(list, s.rng);
 }
 
@@ -176,6 +226,7 @@ export function questValue(E, q) {
     case 'own': return countOwned(s, q.type);
     case 'reputation': return Math.floor(s.reputation);
     case 'size': return E.size;
+    case 'floors': return floorCount(s.shop);
     case 'staff': return s.staff.length;
     case 'sushi': return Object.keys(s.menu).length;
     case 'counter': return E.counters[q.key] || 0;
@@ -213,6 +264,7 @@ const HANDLERS = {
     const s = E.s;
     const def = FURNITURE[a.furniture];
     if (!def || !buildable(E).includes(a.furniture)) return fail('locked');
+    if (floorKind(s.shop, floorOfX(a.x)) === 'vip') return fail('vipFloor');
     if (def.price > s.money) return fail('money');
     const r = canPlace(s.shop, a.furniture, a.x, a.y);
     if (!r.ok) return fail(r.reason);
@@ -229,6 +281,8 @@ const HANDLERS = {
     const s = E.s;
     const f = s.shop.furniture.find((x) => x.id === a.id);
     if (!f) return fail('bad');
+    if (FURNITURE[f.type].fixed) return fail('fixed');
+    if (floorKind(s.shop, floorOfX(a.x)) === 'vip') return fail('vipFloor');
     const r = canPlace(s.shop, f.type, a.x, a.y, f.id);
     if (!r.ok) return fail(r.reason);
     f.x = a.x; f.y = a.y;
@@ -242,6 +296,7 @@ const HANDLERS = {
     const i = s.shop.furniture.findIndex((x) => x.id === a.id);
     if (i < 0) return fail('bad');
     const f = s.shop.furniture[i];
+    if (FURNITURE[f.type].fixed) return fail('fixed');
     if (f.type === 'chefStation' && countOwned(s, 'chefStation') <= 1) return fail('lastStation');
     for (const st of s.staff) if (st.role === 'chef' && st.station === f.id) setRole(s, st.id, 'off');
     s.shop.furniture.splice(i, 1);
@@ -262,10 +317,45 @@ const HANDLERS = {
     s.money -= next.price;
     E.size++;
     s.shop.w = next.w; s.shop.h = next.h;
+    // 樓梯跟著前緣走；包廂樓層重新排滿
+    placeStairs(s);
+    for (let k = 0; k < floorCount(s.shop); k++) if (floorKind(s.shop, k) === 'vip') fillBooths(s, k);
     s.shop.ver++;
-    s.baseArrival = next.arrival;
+    s.baseArrival = arrivalOf(E);
     for (const st of s.staff) setRoleQuiet(s, st);
     return { ok: true, cost: next.price };
+  },
+  /** 往上加蓋一層樓。kind：'normal' 或 'vip'。樓層數沒有上限，越高越貴。 */
+  addFloor(E, a) {
+    const s = E.s;
+    const kind = a.kind === 'vip' ? 'vip' : 'normal';
+    const offer = floorOffer(E, kind);
+    if (s.reputation < offer.rep) return fail('rep');
+    if (s.money < offer.price) return fail('money');
+    const n = floorCount(s.shop);
+    // 現在最上面那一層要留出樓梯的位置
+    if (!stairsFree(s.shop, n - 1)) return fail('stairBlocked');
+    s.money -= offer.price;
+    if (!s.shop.floors) s.shop.floors = [{ kind: 'normal' }];
+    s.shop.floors.push({ kind });
+    placeStairs(s);
+    if (kind === 'vip') fillBooths(s, n);
+    s.shop.ver++;
+    s.baseArrival = arrivalOf(E);
+    E.spentBuild = (E.spentBuild || 0) + offer.price;
+    for (const st of s.staff) setRoleQuiet(s, st);
+    return { ok: true, floor: n, cost: offer.price };
+  },
+  /** 訓練員工：花靈感點升一級。 */
+  train(E, a) {
+    const st = E.s.staff.find((x) => x.id === a.staff);
+    if (!st) return fail('bad');
+    const lv = st.lv || 0;
+    if (lv >= B.TRAIN.MAX) return fail('maxLevel');
+    if (E.insp < B.TRAIN.COST[lv]) return fail('insp');
+    E.insp -= B.TRAIN.COST[lv];
+    st.lv = lv + 1;
+    return { ok: true, lv: st.lv };
   },
   hire(E, a) {
     if (!STAFF[a.staff] || STAFF[a.staff].player) return fail('bad');
@@ -343,7 +433,7 @@ function setRoleQuiet(s, st) {
 }
 
 /** 只有準備階段才能做的操作。 */
-const PREP_ONLY = ['place', 'move', 'sell', 'expand', 'hire', 'fire', 'research', 'setBoard', 'setTrack'];
+const PREP_ONLY = ['place', 'move', 'sell', 'expand', 'addFloor', 'train', 'hire', 'fire', 'research', 'setBoard', 'setTrack'];
 
 /** 套用一個操作。無限模式專用的在這裡處理，其他的轉給店鋪。 */
 export function applyEndless(E, action) {

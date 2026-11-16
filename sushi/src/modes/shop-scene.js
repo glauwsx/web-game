@@ -11,7 +11,8 @@ import { botActions } from '../sim/bots.js';
 import { kufuActive } from '../sim/staff.js';
 import { totalStock } from '../sim/economy.js';
 import { createCamera, setBounds, panCamera, zoomCamera, centerCamera, worldToScreen, screenToWorld } from '../iso/camera.js';
-import { drawScene, cameraBounds, invalidateBackground } from '../iso/render.js';
+import { drawScene, cameraBounds, invalidateBackground, fillCell, strokeCell } from '../iso/render.js';
+import { FLOOR_STRIDE, floorCount, floorOfX } from '../sim/pathfind.js';
 import { facingFromDelta, facingFromName, gridToWorld, worldToGrid, furnitureDepth } from '../iso/iso.js';
 import { createHud, createBubbles, createInfoPop, yen } from '../ui/hud.js';
 import { createSidePanel, portraitImg } from '../ui/panels.js';
@@ -19,6 +20,9 @@ import { createHints } from '../ui/dialog.js';
 import { createOverlayMenu } from '../ui/menus.js';
 
 const SEATED = ['decide', 'wait', 'eat', 'play', 'prize'];
+const GHOST_Z = 46;      // 淡化顯示的上一層樓，畫在往上幾像素的地方
+const GHOST_ALPHA = 0.22;
+const UPPER_SKY = '#232a3d';
 
 /** 其他模組可以替某種家具提供資訊浮窗的內容。fn(state, f, env) 回傳節點。 */
 export const furnitureInfo = {};
@@ -56,6 +60,19 @@ export function createShopScene(app, opts) {
   let viewDirty = true;
   let lastItems = [];
   let hints = null;
+  let viewFloor = 0;   // 現在看的是第幾層（0 = 一樓）。只有無限模式會有樓上
+  const floors = () => floorCount(state.shop);
+  const kindOf = (k) => (state.shop.floors && state.shop.floors[k] ? state.shop.floors[k].kind : 'normal');
+  /** 畫面用的店面：一樓就是店本身；樓上沒有門、沒有街道，包廂樓層鋪榻榻米。 */
+  function viewShop() {
+    if (viewFloor === 0) return state.shop;
+    return { w: state.shop.w, h: state.shop.h, floor: kindOf(viewFloor) === 'vip' ? 'tatami' : state.shop.floor, wall: state.shop.wall, door: null, upper: true };
+  }
+  function setFloor(k) {
+    viewFloor = Math.max(0, Math.min(floors() - 1, k));
+    info.close();
+    updateFloorBar();
+  }
   const cam = createCamera({ x: 0, y: 24, w: 331, h: 216 });
   const watch = { sales: 0, seated: 0, pieces: 0, angry: 0, feedLen: 0 };
 
@@ -109,13 +126,30 @@ export function createShopScene(app, opts) {
   const bubbles = createBubbles(12);
   const info = createInfoPop();
   const fx = h('div', { class: 'kufu-fx hidden' }, t('hud.kufu.fx'));
+  const floorBar = h('div', { class: 'floor-bar solid hidden' });
+  let floorBarKey = '';
+  function updateFloorBar() {
+    const n = floors();
+    if (viewFloor >= n) viewFloor = n - 1;
+    const key = `${n}|${viewFloor}|${(state.shop.floors || []).map((f) => f.kind[0]).join('')}`;
+    if (key === floorBarKey) return;
+    floorBarKey = key;
+    floorBar.classList.toggle('hidden', n < 2);
+    floorBar.replaceChildren();
+    for (let k = n - 1; k >= 0; k--) {
+      floorBar.appendChild(h('button', {
+        class: `btn plain mini floor-btn ${k === viewFloor ? 'active' : ''} ${kindOf(k) === 'vip' ? 'vip' : ''}`, dataset: { floor: k },
+        onclick: () => { app.sfx('button'); setFloor(k); },
+      }, t('floor.name', { n: k + 1 })));
+    }
+  }
   const drawerBtn = h('button', {
     class: 'btn plain drawer-btn', dataset: { id: 'drawer' },
     onclick: () => { root.classList.toggle('drawer-open'); viewDirty = true; },
   }, t('hud.drawer'));
   const hintLayer = h('div', { class: 'hint-layer' });
   const root = h('div', { class: 'scene shop-scene' },
-    bubbles.root, hud.top, panel.root, hud.bottom, hud.banner, drawerBtn, info.root, fx, hintLayer);
+    bubbles.root, hud.top, panel.root, hud.bottom, hud.banner, drawerBtn, floorBar, info.root, fx, hintLayer);
 
   function kufuFx() {
     app.sfx('kufu');
@@ -161,18 +195,30 @@ export function createShopScene(app, opts) {
   // ---- 把狀態變成要畫的清單 ----
   function buildItems() {
     const items = [];
+    const off = viewFloor * FLOOR_STRIDE;
     for (const f of state.shop.furniture) {
       const def = FURNITURE[f.type];
-      const it = { kind: 'furn', type: f.type, x: f.x, y: f.y, w: def.w, h: def.h, ref: f };
+      const k = floorOfX(f.x);
+      if (k === viewFloor + 1) {
+        // 上一層樓：淡淡地畫在上面，看得出那裡有什麼，但不擋住這一層
+        const x = f.x - (viewFloor + 1) * FLOOR_STRIDE;
+        items.push({ kind: 'furn', type: f.type, x, y: f.y, w: def.w, h: def.h, ghost: true, alpha: GHOST_ALPHA, dz: GHOST_Z, depth: 1000 + x + f.y });
+        continue;
+      }
+      if (k !== viewFloor) continue;
+      const it = { kind: 'furn', type: f.type, x: f.x - off, y: f.y, w: def.w, h: def.h, ref: f };
       if (furnitureDraw[f.type]) it.draw = (ctx, x, y) => furnitureDraw[f.type](ctx, x, y, f, state, time);
       items.push(it);
     }
     const walkPose = Math.floor(time / 170) % 2 ? 'walk1' : 'walk2';
-    const lerp = (a, b) => a + (b - a) * alpha;
+    // 換樓層的那一步不做內插（不然會從一樓滑到二樓）
+    const lerp = (a, b) => (Math.abs(b - a) > FLOOR_STRIDE - 2 ? b : a + (b - a) * alpha);
+    const here = (gx) => gx >= off - 12 && gx < off + FLOOR_STRIDE - 12;
     for (const s of state.staff) {
       if (s.role === 'off' || s.gone) continue;
+      if (!here(s.gx)) continue;
       const def = STAFF[s.id];
-      const gx = lerp(s.pgx, s.gx);
+      const gx = lerp(s.pgx, s.gx) - off;
       const gy = lerp(s.pgy, s.gy);
       const moving = s.path.length > 0;
       const face = facingFromDelta(s.fx || 0, s.fy || 1);
@@ -195,7 +241,8 @@ export function createShopScene(app, opts) {
     }
     for (const c of state.customers) {
       if (c.st === 'gone' || (c.st === 'arrive' && c.delay > 0)) continue;
-      const gx = lerp(c.pgx, c.gx);
+      if (!here(c.gx)) continue;
+      const gx = lerp(c.pgx, c.gx) - off;
       const gy = lerp(c.pgy, c.gy);
       const it = { kind: 'actor', charId: c.look, gx, gy, ref: c };
       const f = c.furn ? state.shop.furniture.find((x) => x.id === c.furn) : null;
@@ -206,7 +253,7 @@ export function createShopScene(app, opts) {
         it.pose = slot.pose === 'stand' ? 'stand' : 'sit';
         it.back = face.back; it.flip = face.flip;
         it.z = slot.z;
-        it.depth = furnitureDepth(f.x, f.y, def.w, def.h) + 0.005 + c.slot * 0.0001;
+        it.depth = furnitureDepth(f.x - off, f.y, def.w, def.h) + 0.005 + c.slot * 0.0001;
         // 站著玩的位置在家具前面：至少要畫在家具後面（寬的家具用格子座標算的深度會比家具小）
         if (slot.pose === 'stand') it.depth = Math.max(it.depth, gx + gy);
         if (c.thought && c.thought.until > state.tick && (c.thought.key === 'yummy' || c.thought.key === 'win') && c.st === 'eat') it.pose = it.pose === 'sit' ? 'sit' : 'happy';
@@ -247,7 +294,7 @@ export function createShopScene(app, opts) {
       if (Math.abs(w.x - it.sx) <= 7 && w.y >= it.sy - 23 && w.y <= it.sy + 2) return it;
     }
     const g = worldToGrid(w.x, w.y);
-    const cx = Math.floor(g.gx);
+    const cx = Math.floor(g.gx) + viewFloor * FLOOR_STRIDE;
     const cy = Math.floor(g.gy);
     for (const f of state.shop.furniture) {
       const def = FURNITURE[f.type];
@@ -323,7 +370,9 @@ export function createShopScene(app, opts) {
     name: opts.name || 'shop',
     root,
     get state() { return state; },
-    set state(s) { state = s; invalidateBackground(); viewDirty = true; closedFired = false; panel.rebuild(); },
+    set state(s) { state = s; invalidateBackground(); viewDirty = true; closedFired = false; panel.rebuild(); updateFloorBar(); },
+    setFloor,
+    getFloor: () => viewFloor,
     cam,
     env,
     panel,
@@ -363,6 +412,7 @@ export function createShopScene(app, opts) {
         panel.update();
         info.update();
         if (hints) hints.update();
+        updateFloorBar();
         for (const w of shopWatchers) w(scene, app);
       }
       if (state.phase === 'closed' && !closedFired) {
@@ -376,7 +426,27 @@ export function createShopScene(app, opts) {
       ctx.fillStyle = '#17110c';
       ctx.fillRect(0, 0, app.W, app.H);
       const items = buildItems();
-      lastItems = drawScene(ctx, cam, state.shop, items, { overlay: opts.overlayDraw ? (c) => opts.overlayDraw(c, scene) : null });
+      const off = gridToWorld(-viewFloor * FLOOR_STRIDE, 0);
+      lastItems = drawScene(ctx, cam, viewShop(), items, {
+        sky: viewFloor > 0 ? UPPER_SKY : undefined,
+        overlay: (c) => {
+          // 上一層樓的地板：一片淡淡的框
+          if (viewFloor + 1 < floors()) {
+            c.save();
+            c.translate(0, -GHOST_Z);
+            fillCell(c, 0, 0, state.shop.w, state.shop.h, 'rgba(255, 244, 220, 0.07)');
+            strokeCell(c, 0, 0, state.shop.w, state.shop.h, 'rgba(255, 244, 220, 0.35)');
+            c.restore();
+          }
+          if (opts.overlayDraw) {
+            // 建造的預覽框用的是整張大格子的座標：平移到現在看的這一層
+            c.save();
+            c.translate(off.x, off.y);
+            opts.overlayDraw(c, scene);
+            c.restore();
+          }
+        },
+      });
       showBubbles(lastItems);
     },
     input(evt) {
@@ -390,7 +460,8 @@ export function createShopScene(app, opts) {
         }
         if (opts.onHover) {
           const w = screenToWorld(cam, evt.x, evt.y);
-          opts.onHover(worldToGrid(w.x, w.y), scene);
+          const g = worldToGrid(w.x, w.y);
+          opts.onHover({ gx: g.gx + viewFloor * FLOOR_STRIDE, gy: g.gy }, scene);
         }
       } else if (evt.type === 'pointerup') {
         const wasDrag = drag && drag.moved;
@@ -398,7 +469,8 @@ export function createShopScene(app, opts) {
         if (wasDrag) return true;
         if (opts.onPick) {
           const w = screenToWorld(cam, evt.x, evt.y);
-          if (opts.onPick(worldToGrid(w.x, w.y), scene)) return true;
+          const g = worldToGrid(w.x, w.y);
+          if (opts.onPick({ gx: g.gx + viewFloor * FLOOR_STRIDE, gy: g.gy }, scene)) return true;
         }
         const hit = pick(evt.x, evt.y);
         if (hit) {
@@ -416,6 +488,8 @@ export function createShopScene(app, opts) {
         if (evt.code === 'Digit1') { speed = 1; hud.update(); return true; }
         if (evt.code === 'Digit2') { speed = 2; hud.update(); return true; }
         if (evt.code === 'Digit3' || evt.code === 'Digit4') { speed = 4; hud.update(); return true; }
+        if (evt.code === 'PageUp') { setFloor(viewFloor + 1); return true; }
+        if (evt.code === 'PageDown') { setFloor(viewFloor - 1); return true; }
         if (evt.code === 'Escape') { if (info.isOpen()) info.close(); else openPause(); return true; }
       }
       return false;
@@ -431,8 +505,11 @@ export function createShopScene(app, opts) {
       },
       act: (a) => { const r = apply(a); panel.update(); hud.update(); return r; },
       /** 某一格的中心在視窗上的位置（CSS 像素）。測試用。 */
+      setFloor: (k) => { setFloor(k); return viewFloor; },
+      floor: () => viewFloor,
       cellScreen: (gx, gy) => {
-        const w = gridToWorld(gx + 0.5, gy + 0.5);
+        setFloor(floorOfX(gx));
+        const w = gridToWorld(gx - viewFloor * FLOOR_STRIDE + 0.5, gy + 0.5);
         const p = worldToScreen(cam, w.x, w.y);
         const rect = app.canvas.getBoundingClientRect();
         return { x: rect.left + p.x * app.stageScale, y: rect.top + p.y * app.stageScale };

@@ -37,6 +37,18 @@ export const FURNITURE = {
     w: 1, h: 2, price: 150000, machine: 'race',
     slots: [{ role: 'play', px: 0.5, py: 1.42, z: 7, face: 'N', pose: 'sit', access: [[0, 2], [-1, 1], [1, 1]] }],
   },
+  // 包廂（無限模式的包廂樓層）：4 個座位。只有包廂客會坐。壽司由送餐軌道送到
+  booth: {
+    w: 2, h: 2, price: 60000, vip: true, fixed: true,
+    slots: [
+      { role: 'seat', px: 0.45, py: 0.45, z: 6, face: 'S', pose: 'sit', access: [[-1, 0], [0, -1], [1, -1], [-1, 1], [2, 0], [0, 2], [2, 1], [1, 2]] },
+      { role: 'seat', px: 1.55, py: 0.45, z: 6, face: 'S', pose: 'sit', access: [[2, 0], [1, -1], [0, -1], [2, 1], [-1, 0], [1, 2], [-1, 1], [0, 2]] },
+      { role: 'seat', px: 0.45, py: 1.55, z: 6, face: 'E', pose: 'sit', access: [[-1, 1], [0, 2], [-1, 0], [1, 2], [0, -1], [2, 1], [1, -1], [2, 0]] },
+      { role: 'seat', px: 1.55, py: 1.55, z: 6, face: 'N', pose: 'sit', access: [[2, 1], [1, 2], [2, 0], [0, 2], [1, -1], [-1, 1], [0, -1], [-1, 0]] },
+    ],
+  },
+  // 樓梯（無限模式蓋二樓之後自動出現）：可以踩，不能移動也不能賣
+  stairs: { w: 2, h: 1, price: 0, walk: true, fixed: true, slots: [] },
   fridge: { w: 1, h: 1, price: 30000, stock: 150, slots: [] },
   lantern: { w: 1, h: 1, price: 10000, attraction: 0.05, slots: [] },
   fishTank: { w: 2, h: 1, price: 40000, attraction: 0.10, slots: [] },

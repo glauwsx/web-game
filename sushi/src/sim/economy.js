@@ -139,6 +139,7 @@ export function mixWeights(state, hour) {
     if (type === 'salaryman' && B.LUNCH_HOURS.includes(hour)) weight *= B.LUNCH_SALARYMAN_MULT;
     if (type === 'pachinkoFan' && !hasPachinko) weight = 0;
     if (type === 'raceFan' && !hasRace) weight = 0;
+    if (type === 'vip') weight *= state.shop.furniture.filter((f) => FURNITURE[f.type].vip).length;
     if (state.mixMult && state.mixMult[type]) weight *= state.mixMult[type];
     types.push(type);
     weights.push(weight);

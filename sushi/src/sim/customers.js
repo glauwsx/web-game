@@ -39,7 +39,7 @@ function findSpots(state, layout, c, party) {
     c.goal = 'eat'; // 機台都有人在玩：改成吃飯
   }
   const def = CUSTOMER_TYPES[c.type] || {};
-  return findSeats(state, layout, party.length, !!def.prefersTable);
+  return findSeats(state, layout, party.length, !!def.prefersTable, !!def.booth);
 }
 
 /** 建立一位顧客（還沒放進 state.customers）。 */
@@ -69,6 +69,7 @@ export function createCustomer(state, type, opts = {}) {
     sat: B.SAT_START, bill: 0, fees: 0, eaten: 0, played: 0, priceBonus: 0, tip: 0,
     furn: 0, slot: -1, order: 0, timer: 0, waited: 0, queued: 0,
     thought: null, settled: false,
+    vip: !!def.booth,
     goal: opts.goal || 'eat', plays: opts.plays || 0, prizes: [], boss: opts.boss || null,
     prizePending: 0, prizeGot: 0, mtimer: 0,
   };
@@ -123,7 +124,16 @@ function freeSeatSlots(state, layout, f) {
 }
 
 /** 幫一組 n 個人找座位。回傳 [{ furn, slot }]，找不到回傳 null。 */
-export function findSeats(state, layout, n, prefersTable) {
+export function findSeats(state, layout, n, prefersTable, booth = false) {
+  if (booth) {
+    // 包廂客：一組人包一整間空的包廂
+    for (const f of state.shop.furniture) {
+      if (!FURNITURE[f.type].vip) continue;
+      const s = freeSeatSlots(state, layout, f);
+      if (s.length >= n && s.length === FURNITURE[f.type].slots.length) return s.slice(0, n).map((slot) => ({ furn: f.id, slot }));
+    }
+    return null;
+  }
   const counters = [];
   const tables = [];
   for (const f of state.shop.furniture) {
@@ -227,10 +237,11 @@ export function chooseOrder(state, c) {
     const m = state.menu[item];
     if (!m.on) continue;
     if (c.tasted && c.tasted.includes(item)) continue; // 檸檬每個品項只試吃一次
-    const price = sellPrice(state, item);
+    const base = sellPrice(state, item);
+    const price = c.vip ? Math.round(base * B.VIP.PRICE_MULT / B.PRICE_STEP) * B.PRICE_STEP : base;
     if (price > c.budget) continue;
     const coef = m.mode === 'cheapHonest' ? B.QUALITY_COEF.cheap : B.QUALITY_COEF.premium;
-    const u = c.prefs[item] * coef - c.sens * (price / customerRef(item, m.mode)) + rngRange(state.rng, -B.ORDER_NOISE, B.ORDER_NOISE);
+    const u = c.prefs[item] * coef - c.sens * (base / customerRef(item, m.mode)) + rngRange(state.rng, -B.ORDER_NOISE, B.ORDER_NOISE);
     if (!best || u > best.u) best = { item, price, u };
     if (inStock(state, item) && (!bestIn || u > bestIn.u)) bestIn = { item, price, u };
   }

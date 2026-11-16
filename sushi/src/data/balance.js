@@ -226,6 +226,7 @@ export const BOT = {
   RESTOCK_BELOW: 12,      // 庫存低於幾單位就補貨
   RESTOCK_QTY: 20,
   ENDLESS_RESERVE: 80000, // 無限模式：手上至少留這麼多錢才蓋東西
+  ENDLESS_FLOORS: 4,      // 無限模式：自動玩家最多蓋到幾層
 };
 
 // ---- 無限模式（計劃書第 12 節） ----
@@ -269,4 +270,27 @@ export const ENDLESS = {
   BOSS_AFTER_DAYS: 7,       // 擁有機台幾天後強敵開始出現
   BOSS_CHANCE: { bucho: 0.12, pro: 0.2, shumaha: 0.15, lemon: 0.1 },
   LEMON_REP: 40,
+};
+
+// ---- 樓層、包廂、員工訓練（無限模式） ----
+export const LIFT_MIN = 2;                 // 送餐軌道：送到另一層樓或包廂要幾遊戲分鐘
+export const VIP = {
+  PRICE_MULT: 1.3,        // 包廂價：售價乘上這個倍率（包廂客心裡的價位也一樣高，所以不會嫌貴）
+  MIX_PER_BOOTH: 0.1,     // 每一間包廂讓包廂客的來客權重加多少
+};
+export const FLOORS = {
+  PRICE: 1500000,         // 二樓的價格
+  PRICE_GROWTH: 1.8,      // 每往上一層貴多少倍
+  VIP_MULT: 1.5,          // 包廂樓層的價格倍率（含全部包廂）
+  REP: 50,                // 二樓需要的評價
+  REP_STEP: 5,            // 每往上一層多需要多少評價
+  REP_MAX: 90,
+  ARRIVAL_BONUS: 0.3,     // 每多一層樓，來客多多少
+};
+export const TRAIN = {
+  MAX: 5,
+  COST: [3, 5, 8, 12, 16], // 升到第 1 到 5 級各要幾點靈感
+  SPEED: 1,               // 每級捏製速度 +1
+  SKILL_EVERY: 2,         // 每 2 級技術 +1
+  WALK: 0.1,              // 每級走路速度 +10%
 };

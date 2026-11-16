@@ -109,6 +109,19 @@ export const CUSTOMER_LOOKS = {
     { build: 'stocky', skin: 's', hair: { style: 'short', color: 'g' }, face: { mustache: 'hachi', mustacheColor: 'g' }, top: { style: 'suit', color: 'b', tie: 'e' }, bottom: { style: 'pants', color: 'a' }, shoes: { color: 'k' }, hat: { style: 'beret', color: 'm' }, acc: ['scarf'] },
     { build: 'adult', skin: 's', hair: { style: 'bob', color: 'h' }, face: { glasses: 'glasses' }, top: { style: 'tshirt', color: 'k', sleeve: 'long', neck: false, scarf: 'e' }, bottom: { style: 'pants', color: 'k' }, shoes: { color: 'k' }, hat: { style: 'beret', color: 'v' }, acc: ['scarf'] },
   ],
+  // 包廂客：穿著正式
+  vip: [
+    { build: 'adult', skin: 's', hair: { style: 'sidepart', color: 'k' }, top: { style: 'suit', color: 'v', tie: 'y' }, bottom: { style: 'pants', color: 'v' }, shoes: { color: 'k' } },
+    { build: 'adult', skin: 's', hair: { style: 'bun', color: 'k' }, top: { style: 'kimono', color: 'P', color2: 'w', obi: 'r' }, bottom: { style: 'kimono', color: 'P' }, shoes: { color: 'w' } },
+    { build: 'stocky', skin: 's', hair: { style: 'thin', color: 'g' }, face: { glasses: 'glasses' }, top: { style: 'suit', color: 'K', tie: 'r' }, bottom: { style: 'pants', color: 'K' }, shoes: { color: 'k' } },
+  ],
+  // 打工仔（無限模式可以雇很多位）
+  baito: [
+    { build: 'adult', skin: 's', hair: { style: 'short', color: 'k' }, top: { style: 'chef', color: 'w', sleeve: 'short' }, bottom: { style: 'pants', color: 'i' }, shoes: { color: 'k' }, hat: { style: 'headband', color: 'r' } },
+    { build: 'adult', skin: 's', hair: { style: 'ponytail', color: 'h' }, top: { style: 'chef', color: 'w', sleeve: 'short' }, bottom: { style: 'pants', color: 'i' }, shoes: { color: 'k' }, hat: { style: 'headband', color: 'i' } },
+    { build: 'tall', skin: 's', hair: { style: 'spiky', color: 'H' }, top: { style: 'chef', color: 'w', sleeve: 'short' }, bottom: { style: 'pants', color: 'i' }, shoes: { color: 'k' }, hat: { style: 'headband', color: 'y' } },
+    { build: 'stocky', skin: 's', hair: { style: 'buzz', color: 'k' }, top: { style: 'chef', color: 'w', sleeve: 'short' }, bottom: { style: 'pants', color: 'i' }, shoes: { color: 'k' }, hat: { style: 'headband', color: 'v' } },
+  ],
   // 特殊刑事：奇裝異服
   tokkei: [
     { build: 'stocky', skin: 's', hair: { style: 'curly', color: 'p' }, face: { glasses: 'shades' }, top: { style: 'aloha', color: 'p', color2: 'y', sleeve: 'short' }, bottom: { style: 'shorts', color: 'y' }, shoes: { color: 'r' } },
@@ -148,7 +161,12 @@ export const STAFF = {
   reiko:    { speed: 3, skill: 4, service: 10, walk: 'normal', lang: true,  wage: 15000, look: 'reiko', floorAttraction: 0.15 },
   nakagawa: { speed: 5, skill: 5, service: 9,  walk: 'normal', lang: true,  wage: 20000, look: 'nakagawa' },
 };
-export const STAFF_ORDER = ['ryo', 'honda', 'terai', 'matoi', 'reiko', 'nakagawa'];
+// 打工仔：數值普通，人數多。無限模式用訓練把他們練起來
+export const BAITO_COUNT = 12;
+for (let i = 1; i <= BAITO_COUNT; i++) {
+  STAFF[`baito${i}`] = { speed: 5, skill: 5, service: 5, walk: 'normal', lang: false, wage: 8000, look: `baito.${(i - 1) % 4}`, baito: i };
+}
+export const STAFF_ORDER = ['ryo', 'honda', 'terai', 'matoi', 'reiko', 'nakagawa'].concat(Array.from({ length: BAITO_COUNT }, (_, i) => `baito${i + 1}`));
 
 // ---- 顧客類型 ----
 // appetite：食量（貫）。budget：預算（¥）。sens：價格敏感度。patience：耐心（分）。
@@ -164,6 +182,8 @@ export const CUSTOMER_TYPES = {
   raceFan:     { appetite: [0, 2], budget: [2000, 4000], sens: 1.0, patience: 10, tierPref: [1.0, 1.0, 0.95, 0.9], party: 1, machine: 'race', plays: [1, 2] },
   // 檸檬：試吃 3 個品項，偏好高等級，不在意價格
   lemon:       { appetite: [3, 3], budget: [20000, 20000], sens: 0, patience: 30, tierPref: [0.6, 0.9, 1.25, 1.5], party: 1, special: true },
+  // 包廂客（無限模式的包廂樓層）：3 人一組，只坐包廂，吃得多，包廂價
+  vip:         { appetite: [5, 8], budget: [6000, 12000], sens: 0.5, patience: 15, tierPref: [0.9, 1.0, 1.1, 1.15], party: 3, booth: true },
   // 無限模式的事件客人：特殊刑事（消費很高）、白鳥麗次（點 20 貫最貴的）
   tokkei:      { appetite: [7, 10], budget: [8000, 12000], sens: 0.3, patience: 20, tierPref: [0.8, 1.0, 1.2, 1.3], party: 1, special: true },
   shiratori:   { appetite: [20, 20], budget: [99000, 99000], sens: 0, patience: 30, tierPref: [0.1, 0.3, 1.0, 3.0], party: 1, special: true },
