@@ -41,6 +41,7 @@ html, body {
   height: var(--stage-h);
   transform: translate(-50%, -50%);
   overflow: hidden;
+  overflow: clip; /* 不讓瀏覽器為了顯示某個元件而捲動舞台 */
   background: #000;
   font-size: var(--fs);
 }
@@ -312,8 +313,9 @@ button {
 .drawer-btn { display: none; position: absolute; right: 0.3em; top: calc(var(--hud-h) + 0.3em); z-index: 6; font-size: 0.85em; padding: 0.2em 0.7em; }
 .narrow .shop-scene { --side-w: 50%; }
 .narrow .drawer-btn { display: block; }
-.narrow .side { transform: translateX(102%); transition: transform 0.15s; font-size: 0.9em; }
-.narrow .drawer-open .side { transform: none; }
+/* 收起來的面板要 visibility: hidden：不然鍵盤或程式點到裡面的按鈕時，瀏覽器會把舞台捲過去，整個畫面歪掉 */
+.narrow .side { transform: translateX(102%); visibility: hidden; transition: transform 0.15s, visibility 0s 0.15s; font-size: 0.9em; }
+.narrow .drawer-open .side { transform: none; visibility: visible; transition: transform 0.15s; }
 .narrow .drawer-open .drawer-btn { right: calc(var(--side-w) + 0.3em); }
 .narrow .hud-title, .narrow .rep-num, .narrow .bottom-info { display: none; }
 .narrow .hud { gap: 0.35em; font-size: 0.95em; }
