@@ -10,6 +10,9 @@ import {
 } from './ui/menus.js';
 import { createDemoScene } from './modes/demo.js';
 import { createAudio } from './core/audio.js';
+import { createMusic } from './core/music.js';
+import { SONGS, SCENE_MUSIC, KEEP_MUSIC } from './data/music.js';
+import { HOUR_CURVE, TICKS_PER_MIN } from './data/balance.js';
 import { SAVE_KEYS } from './core/save.js';
 import { createLevelSelectScene, startLevel } from './modes/owner-level.js';
 import { createEndlessMenuScene, startEndless, loadEndless, endlessSettings } from './modes/owner-endless.js';
@@ -128,6 +131,7 @@ const app = {
   if (r.status === 'corrupt') store.remove(SAVE_KEYS.settings);
 }
 app.audio = createAudio(() => app.settings);
+app.music = createMusic(app.audio, SONGS);
 // 瀏覽器要求使用者互動後才能出聲
 const wake = () => app.audio.resume();
 window.addEventListener('pointerdown', wake);
@@ -173,10 +177,40 @@ layout();
 function isPortraitBlocked() {
   return window.matchMedia('(orientation: portrait) and (max-width: 600px)').matches;
 }
+/** 依目前的場景決定要播哪一首音樂（計劃書 16）。 */
+const PEAK_CURVE = 1.4; // 這個小時的來客倍率達到這個值，就算尖峰時段
+function songForScenes() {
+  const list = scenes.all();
+  for (let i = list.length - 1; i >= 0; i--) {
+    const sc = list[i];
+    const base = String(sc.name).split(':')[0];
+    if (KEEP_MUSIC.includes(base)) continue;
+    const song = SCENE_MUSIC[base];
+    if (song === '*shop') {
+      const s = sc.state;
+      if (!s || s.phase !== 'open') return 'shop';
+      const hour = Math.floor((s.openMin + Math.floor(s.tick / TICKS_PER_MIN)) / 60);
+      return (HOUR_CURVE[hour] || 0) >= PEAK_CURVE ? 'shopPeak' : 'shop';
+    }
+    return song || 'title';
+  }
+  return 'title';
+}
+let musicTimer = 0;
+// 效能量測（只在 debug 下用）：每個畫面的更新加繪圖時間
+const frameStats = { n: 0, ms: 0, max: 0 };
+app.frameStats = frameStats;
 startLoop((dt) => {
   if (isPortraitBlocked()) return; // 直向時暫停
+  const t0 = debug ? performance.now() : 0;
   scenes.update(dt);
   scenes.render(ctx);
+  if (debug) {
+    const ms = performance.now() - t0;
+    frameStats.n++; frameStats.ms += ms; frameStats.max = Math.max(frameStats.max, ms);
+  }
+  musicTimer += dt;
+  if (musicTimer > 250) { musicTimer = 0; app.music.play(songForScenes()); }
 });
 
 // ---- 起始場景 ----

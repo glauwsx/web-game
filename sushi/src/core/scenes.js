@@ -73,6 +73,8 @@ export function createSceneManager(host = {}) {
     top() { return stack[stack.length - 1]; },
     depth() { return stack.length; },
     names() { return stack.map((s) => s.name); },
+    /** 整個堆疊（由下到上）的複本。 */
+    all() { return stack.slice(); },
     update(dtMs) {
       const top = stack[stack.length - 1];
       if (top && top.update) top.update(dtMs);

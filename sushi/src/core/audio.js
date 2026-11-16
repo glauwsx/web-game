@@ -8,6 +8,7 @@ export function createAudio(getSettings) {
   let musicGain = null;
   let noiseBuf = null;
   const last = {};
+  let engine = null; // 賽車的引擎聲 { osc, g }
 
   function ensure() {
     if (ctx) return true;
@@ -114,6 +115,31 @@ export function createAudio(getSettings) {
       if (last[name] && now - last[name] < minGapMs) return;
       last[name] = now;
       fn();
+    },
+    /**
+     * 引擎聲（賽車）：持續的低音，音高跟速度連動。ratio 是速度比例（0 到 1.3），null 是關掉。
+     */
+    engine(ratio) {
+      if (ratio === null || ratio === undefined) {
+        if (engine) { engine.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); const e = engine; setTimeout(() => { try { e.osc.stop(); } catch (err) { /* 已經停了 */ } }, 300); engine = null; }
+        return;
+      }
+      if (!ctx || ctx.state !== 'running') return;
+      if (!engine) {
+        const osc = ctx.createOscillator();
+        const f = ctx.createBiquadFilter();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        f.type = 'lowpass';
+        f.frequency.value = 900;
+        g.gain.value = 0.0001;
+        osc.connect(f); f.connect(g); g.connect(sfxGain);
+        osc.start();
+        engine = { osc, g };
+      }
+      const r = Math.max(0, Math.min(1.4, ratio));
+      engine.osc.frequency.setTargetAtTime(55 + r * 140, ctx.currentTime, 0.05);
+      engine.g.gain.setTargetAtTime(0.05 + r * 0.07, ctx.currentTime, 0.05);
     },
     /** 註冊更多音效（小遊戲用）。fn 會拿到 { tone, noise }。 */
     register(name, fn) { SFX[name] = () => fn({ tone, noise }); },

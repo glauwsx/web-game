@@ -13,7 +13,22 @@ import { drawRace } from './render.js';
 
 const COUNTDOWN_MS = 3000;
 
+// 賽車專用的音效（計劃書 16）：噴射、碰撞、水灘、倒數、出發
+let soundsReady = false;
+function registerSounds(app) {
+  if (soundsReady || !app.audio || !app.audio.register) return;
+  soundsReady = true;
+  app.audio.register('raceBoost', ({ tone, noise }) => { noise({ dur: 0.5, vol: 0.2, freq: 1200, type: 'lowpass' }); tone({ type: 'sawtooth', f0: 220, f1: 660, dur: 0.4, vol: 0.12 }); });
+  app.audio.register('raceCrash', ({ tone, noise }) => { noise({ dur: 0.25, vol: 0.35, freq: 500 }); tone({ type: 'square', f0: 160, f1: 60, dur: 0.2, vol: 0.15 }); });
+  app.audio.register('raceBump', ({ noise }) => { noise({ dur: 0.08, vol: 0.2, freq: 900 }); });
+  app.audio.register('racePuddle', ({ noise, tone }) => { noise({ dur: 0.35, vol: 0.18, freq: 2500, q: 4 }); tone({ type: 'sine', f0: 900, f1: 300, dur: 0.3, vol: 0.1 }); });
+  app.audio.register('raceCount', ({ tone }) => { tone({ type: 'square', f0: 660, dur: 0.15, vol: 0.2 }); });
+  app.audio.register('raceGo', ({ tone }) => { tone({ type: 'square', f0: 1320, dur: 0.4, vol: 0.22 }); });
+}
+const EVENT_SOUND = { boost: 'raceBoost', pad: 'raceBoost', puddle: 'racePuddle', crash: 'raceCrash', bump: 'raceBump' };
+
 export function createRaceScene(app, opts = {}) {
+  registerSounds(app);
   const race = createRace({ track: opts.track || 'itamae', level: opts.level || 3, shumaha: !!opts.shumaha, stats: opts.stats, laps: opts.laps });
   const p = playerCar(race);
   const stepper = createStepper(1000 * R.DT);
@@ -72,8 +87,14 @@ export function createRaceScene(app, opts = {}) {
     return { steer, accel: app.settings.autoAccel || inp.anyDown('ArrowUp', 'KeyW'), brake: inp.anyDown('ArrowDown', 'KeyS'), boost };
   }
 
+  /** 引擎聲：音高跟速度連動。null 是關掉。 */
+  function engine(ratio) {
+    if (app.audio && app.audio.engine) app.audio.engine(ratio);
+  }
+
   function finish() {
     finished = true;
+    engine(null);
     el.got.classList.add('hidden');
     const place = p.place || placeOf(race, p);
     const won = wonSushi(race);
@@ -141,6 +162,7 @@ export function createRaceScene(app, opts = {}) {
     name: 'race',
     root,
     result: null,
+    exit() { engine(null); },
     update(dt) {
       view.time += dt;
       if (countdown > 0) {
@@ -148,7 +170,7 @@ export function createRaceScene(app, opts = {}) {
         countdown -= dt;
         const now = Math.ceil(countdown / 1000);
         el.center.textContent = countdown > 0 ? String(now) : t('race.go');
-        if (now !== before) app.sfx(countdown > 0 ? 'button' : 'open');
+        if (now !== before) app.sfx(countdown > 0 ? 'raceCount' : 'raceGo');
         if (countdown <= 0) setTimeout(() => { if (!finished) el.center.textContent = ''; }, 700);
         return;
       }
@@ -161,9 +183,10 @@ export function createRaceScene(app, opts = {}) {
         });
         for (; seenEvents < race.events.length; seenEvents++) {
           const k = race.events[seenEvents].kind;
-          app.sfx(k === 'boost' || k === 'pad' ? 'kufu' : k === 'puddle' ? 'angry' : 'deny', 200);
+          app.sfx(EVENT_SOUND[k] || 'raceBump', 200);
         }
         if (race.events.length >= 20) seenEvents = race.events.length;
+        engine(p.speed / R.MAX_SPEED);
       } else if (!finished) finish();
       if (gotTimer > 0) { gotTimer -= dt; if (gotTimer <= 0) el.got.classList.add('hidden'); }
       uiTimer += dt;
