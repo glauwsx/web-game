@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DualSense 自適應扳機測試</title>
+<title>DualSense 手把測試</title>
 <style>
   :root { --bg:#12141a; --panel:#1c2029; --line:#2e3442; --text:#e8eaf0; --dim:#9099ab; --accent:#4c8dff; --ok:#3ecf8e; --warn:#ffb454; }
   * { box-sizing: border-box; }
@@ -35,12 +35,26 @@
   .presets button { padding:6px 12px; font-size:13px; }
   pre { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:12px; color:var(--dim); overflow:auto; margin:8px 0 0; }
   .hidden { display:none; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chips span { font-size:12px; padding:2px 8px; border:1px solid var(--line); border-radius:999px; color:var(--dim); }
+  .chips span.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .pad { position:relative; width:100%; aspect-ratio:16/9; background:var(--bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .pad.click { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+  .finger { position:absolute; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%; display:none; align-items:center; justify-content:center; font-size:12px; color:#fff; }
+  .finger.f0 { background:var(--accent); } .finger.f1 { background:#e8735b; }
+  .aim { position:relative; width:100%; aspect-ratio:16/9; background:var(--bg); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .aim::before, .aim::after { content:''; position:absolute; background:var(--line); }
+  .aim::before { left:50%; top:0; bottom:0; width:1px; } .aim::after { top:50%; left:0; right:0; height:1px; }
+  #dot { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border:2px solid var(--ok); border-radius:50%; }
+  .nums { font:12px/1.6 ui-monospace, monospace; color:var(--dim); margin-top:8px; white-space:pre; overflow:auto; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .btns button { padding:6px 12px; font-size:13px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>DualSense 自適應扳機測試</h1>
-  <p class="sub">用 WebHID 直接控制 L2 / R2 阻力與燈光。需要電腦版 Chrome 或 Edge。USB 與藍牙都支援。</p>
+  <h1>DualSense 手把測試</h1>
+  <p class="sub">用 WebHID 測試扳機阻力、燈光、震動、觸控板、陀螺儀。需要電腦版 Chrome 或 Edge。USB 與藍牙都支援。</p>
 
   <div class="bar">
     <button id="connect">連接手把</button>
@@ -77,6 +91,42 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:16px">
+    <h2>震動馬達（Rumble）<span>拉滑桿會持續震動</span></h2>
+    <div class="grid">
+      <div><label>左馬達：重、低頻 <b id="rlv">0</b></label><input type="range" id="rumL" min="0" max="255" value="0"></div>
+      <div><label>右馬達：輕、高頻 <b id="rrv">0</b></label><input type="range" id="rumR" min="0" max="255" value="0"></div>
+    </div>
+    <div class="btns">
+      <button class="ghost" data-pulse="255,0,150">重擊</button>
+      <button class="ghost" data-pulse="0,255,80">輕點</button>
+      <button class="ghost" data-pulse="200,200,400">爆炸</button>
+      <button class="ghost" data-pulse="heartbeat">心跳</button>
+      <button class="ghost" id="rumOff">停止震動</button>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2>觸控板（Touchpad）<span id="tpinfo">—</span></h2>
+      <div class="pad" id="pad"><div class="finger f0">1</div><div class="finger f1">2</div></div>
+      <div class="hint">最多追蹤 2 根手指。整片按下去時，外框會變藍。座標範圍 0–1919 × 0–1079。</div>
+    </div>
+    <div class="card">
+      <h2>陀螺儀（Gyro）<span>轉動手把移動準心</span></h2>
+      <div class="aim" id="aim"><div id="dot"></div></div>
+      <div class="btns"><button class="ghost" id="recenter">準心歸位</button><button class="ghost" id="calib">校正漂移（手把放平靜止）</button></div>
+      <label style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="invX">左右反向 <input type="checkbox" id="invY">上下反向</label>
+      <div class="nums" id="motion">—</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>按鈕<span id="battery">電量 —</span></h2>
+    <div class="chips" id="chips"></div>
+    <div class="nums" id="sticks">—</div>
+  </div>
+
   <details style="margin-top:16px">
     <summary style="cursor:pointer;color:var(--dim);font-size:13px">除錯資訊</summary>
     <pre id="debug">—</pre>
@@ -111,6 +161,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const statusEl = $('#status'), debugEl = $('#debug');
 
 let device = null, bluetooth = false, seq = 0, sendTimer = null, lightSetup = true;
+const rumble = { l: 0, r: 0 };
 
 // ---------- 扳機效果編碼（每個扳機 11 bytes：模式 + 10 個參數） ----------
 function encodeEffect(c) {
@@ -157,9 +208,12 @@ function crc32(bytes) {
 function buildCommon(left, right) {
   const p = new Uint8Array(47);
   p[0] = 0x04 | 0x08;          // 允許修改右扳機與左扳機
+  p[0] |= 0x01 | 0x02;         // 允許修改震動馬達
   p[1] = 0x01 | 0x04 | 0x10;   // 允許修改麥克風燈、燈條、玩家指示燈
+  p[2] = rumble.r; p[3] = rumble.l;
   p[8] = +$('#mic').value;
-  if (lightSetup) { p[38] = 0x02; p[41] = 0x02; lightSetup = false; } // 連接後送一次：關掉藍牙配對的藍色動畫
+  p[38] = 0x04;                // 新版韌體的震動相容模式
+  if (lightSetup) { p[38] |= 0x02; p[41] = 0x02; lightSetup = false; } // 連接後送一次：關掉藍牙配對的藍色動畫
   let leds = 0;
   document.querySelectorAll('#leds input:checked').forEach(x => leds |= +x.dataset.bit);
   p[43] = leds | 0x20;         // 0x20 = 立即切換，不淡入
@@ -209,15 +263,117 @@ async function openDevice(d) {
   send();
 }
 
+// 輸入狀態：每個報告更新 st，畫面用 requestAnimationFrame 讀取
+const st = { l2: 0, r2: 0, full: false, lx: 128, ly: 128, rx: 128, ry: 128, b: [8, 0, 0], touch: [null, null],
+  gyro: [0, 0, 0], accel: [0, 0, 0], battery: -1, charging: 0 };
+const bias = [0, 0, 0];
+const aim = { x: 0, y: 0 };
+let lastT = 0, calibSamples = null;
+
 function onInput(e) {
   const v = e.data;
-  let l, r;
-  if (e.reportId === 0x01 && v.byteLength >= 60) { l = v.getUint8(4); r = v.getUint8(5); }      // USB
-  else if (e.reportId === 0x31) { l = v.getUint8(5); r = v.getUint8(6); }                        // 藍牙完整報告
-  else if (e.reportId === 0x01) { l = v.getUint8(7); r = v.getUint8(8); }                        // 藍牙簡易報告
-  else return;
-  setMeter('L2', l); setMeter('R2', r);
+  let o;                                            // 完整報告裡搖桿資料的起點
+  if (e.reportId === 0x01 && v.byteLength >= 60) o = 0;   // USB
+  else if (e.reportId === 0x31) o = 1;                   // 藍牙完整報告
+  else if (e.reportId === 0x01) {                        // 藍牙簡易報告：只有按鈕與扳機
+    st.full = false; st.l2 = v.getUint8(7); st.r2 = v.getUint8(8); return;
+  } else return;
+  st.full = true;
+  st.lx = v.getUint8(o); st.ly = v.getUint8(o + 1); st.rx = v.getUint8(o + 2); st.ry = v.getUint8(o + 3);
+  st.l2 = v.getUint8(o + 4); st.r2 = v.getUint8(o + 5);
+  st.b = [v.getUint8(o + 7), v.getUint8(o + 8), v.getUint8(o + 9)];
+  for (let k = 0; k < 3; k++) {
+    st.gyro[k] = v.getInt16(o + 15 + 2 * k, true) / 1024;   // 約 1024 = 1 度/秒（未用出廠校正值）
+    st.accel[k] = v.getInt16(o + 21 + 2 * k, true) / 8192; // 約 8192 = 1 g
+  }
+  for (let f = 0; f < 2; f++) {
+    const a = o + 32 + 4 * f, c = v.getUint8(a);
+    st.touch[f] = c & 0x80 ? null : {
+      id: c & 0x7f,
+      x: v.getUint8(a + 1) | (v.getUint8(a + 2) & 0x0f) << 8,
+      y: v.getUint8(a + 2) >> 4 | v.getUint8(a + 3) << 4,
+    };
+  }
+  const status = v.getUint8(o + 52);
+  st.battery = Math.min(100, (status & 0x0f) * 10 + 5); st.charging = status >> 4;
+
+  // 陀螺儀積分成準心位置
+  const now = performance.now(), dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
+  lastT = now;
+  if (calibSamples) {
+    calibSamples.push([...st.gyro]);
+    if (calibSamples.length >= 200) {
+      for (let k = 0; k < 3; k++) bias[k] = calibSamples.reduce((s, g) => s + g[k], 0) / calibSamples.length;
+      calibSamples = null; aim.x = aim.y = 0;
+      $('#calib').textContent = '校正漂移（手把放平靜止）';
+    }
+    return;
+  }
+  const yaw = st.gyro[1] - bias[1], pitch = st.gyro[0] - bias[0];
+  aim.x = clamp(aim.x - yaw * dt * ($('#invX').checked ? -1 : 1), -40, 40);   // 單位：度
+  aim.y = clamp(aim.y - pitch * dt * ($('#invY').checked ? -1 : 1), -22.5, 22.5);
 }
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+const BTN = [
+  ['□', 0, 0x10], ['✕', 0, 0x20], ['○', 0, 0x40], ['△', 0, 0x80],
+  ['L1', 1, 0x01], ['R1', 1, 0x02], ['L2', 1, 0x04], ['R2', 1, 0x08],
+  ['Create', 1, 0x10], ['Options', 1, 0x20], ['L3', 1, 0x40], ['R3', 1, 0x80],
+  ['PS', 2, 0x01], ['觸控板按下', 2, 0x02], ['靜音鍵', 2, 0x04],
+];
+const DPAD = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+$('#chips').innerHTML = ['十字鍵 —', ...BTN.map(b => b[0])].map(t => `<span>${t}</span>`).join('');
+const chipEls = [...document.querySelectorAll('#chips span')];
+
+function render() {
+  setMeter('L2', st.l2); setMeter('R2', st.r2);
+  const hat = st.b[0] & 0x0f;
+  chipEls[0].textContent = '十字鍵 ' + (hat < 8 ? DPAD[hat] : '—'); chipEls[0].classList.toggle('on', hat < 8);
+  BTN.forEach(([, i, m], k) => chipEls[k + 1].classList.toggle('on', !!(st.b[i] & m)));
+  $('#sticks').textContent = `左搖桿 x=${st.lx} y=${st.ly}    右搖桿 x=${st.rx} y=${st.ry}`;
+  if (st.full) {
+    st.touch.forEach((t, f) => {
+      const el = $('.finger.f' + f);
+      el.style.display = t ? 'flex' : 'none';
+      if (t) { el.style.left = t.x / 1920 * 100 + '%'; el.style.top = t.y / 1080 * 100 + '%'; }
+    });
+    $('#tpinfo').textContent = st.touch.map((t, f) => t ? `${f + 1}: ${t.x}, ${t.y}` : '').filter(Boolean).join('  ') || '沒有手指';
+    $('#pad').classList.toggle('click', !!(st.b[2] & 0x02));
+    $('#dot').style.left = 50 + aim.x / 80 * 100 + '%'; $('#dot').style.top = 50 + aim.y / 45 * 100 + '%';
+    const f = a => a.map(x => x.toFixed(2).padStart(7)).join(' ');
+    $('#motion').textContent = `陀螺儀（度/秒） ${f(st.gyro.map((g, k) => g - bias[k]))}\n加速度計（g）   ${f(st.accel)}`;
+    $('#battery').textContent = `電量約 ${st.battery}%` + (['', '（充電中）', '（已充滿）'][st.charging] ?? '');
+  } else if (device) {
+    $('#motion').textContent = $('#tpinfo').textContent = '藍牙簡易模式：沒有觸控板與陀螺儀資料。請重新連接。';
+  }
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+$('#recenter').onclick = () => { aim.x = aim.y = 0; };
+$('#calib').onclick = () => { calibSamples = []; $('#calib').textContent = '校正中，請不要動…'; };
+
+// ---------- 震動 ----------
+let pulseTimers = [];
+function setRumble(l, r) {
+  rumble.l = l; rumble.r = r;
+  $('#rumL').value = l; $('#rumR').value = r; $('#rlv').textContent = l; $('#rrv').textContent = r;
+  queueSend();
+}
+function stopPulses() { pulseTimers.forEach(clearTimeout); pulseTimers = []; }
+function pulse(steps) {          // steps: [[左, 右, 毫秒], ...]
+  stopPulses();
+  let t = 0;
+  for (const [l, r, ms] of steps) { pulseTimers.push(setTimeout(() => setRumble(l, r), t)); t += ms; }
+  pulseTimers.push(setTimeout(() => setRumble(0, 0), t));
+}
+for (const id of ['rumL', 'rumR']) $('#' + id).addEventListener('input', () => { stopPulses(); setRumble(+$('#rumL').value, +$('#rumR').value); });
+document.querySelectorAll('[data-pulse]').forEach(btn => btn.onclick = () => {
+  const d = btn.dataset.pulse;
+  if (d === 'heartbeat') pulse([[180, 0, 90], [0, 0, 120], [255, 0, 110], [0, 0, 600], [180, 0, 90], [0, 0, 120], [255, 0, 110]]);
+  else { const [l, r, ms] = d.split(',').map(Number); pulse([[l, r, ms]]); }
+});
+$('#rumOff').onclick = () => { stopPulses(); setRumble(0, 0); };
 
 $('#connect').onclick = async () => {
   if (!navigator.hid) { setStatus('這個瀏覽器不支援 WebHID。請用電腦版 Chrome 或 Edge。', 'warn'); return; }
@@ -231,7 +387,7 @@ $('#reset').onclick = () => { for (const k of ['L2', 'R2']) { cards[k].mode.valu
 
 if (navigator.hid) {
   navigator.hid.addEventListener('disconnect', e => {
-    if (e.device === device) { device = null; $('#reset').disabled = true; setStatus('手把已中斷連接', 'warn'); }
+    if (e.device === device) { stopPulses(); device = null; $('#reset').disabled = true; setStatus('手把已中斷連接', 'warn'); }
   });
   navigator.hid.getDevices().then(ds => {   // 之前授權過就自動連接
     const d = ds.find(x => x.vendorId === VENDOR && PRODUCTS.includes(x.productId));
@@ -241,7 +397,7 @@ if (navigator.hid) {
   setStatus('這個瀏覽器不支援 WebHID。請用電腦版 Chrome 或 Edge。', 'warn');
 }
 window.addEventListener('beforeunload', () => {
-  if (device?.opened) { for (const k of ['L2', 'R2']) cards[k].mode.value = 'off'; send(); }
+  if (device?.opened) { for (const k of ['L2', 'R2']) cards[k].mode.value = 'off'; rumble.l = rumble.r = 0; send(); }
 });
 
 // ---------- 介面 ----------
@@ -320,6 +476,7 @@ function refresh(key) {
   z.style.left = s / 255 * 100 + '%'; z.style.width = Math.max(0, e - s) / 255 * 100 + '%';
 }
 function setMeter(key, v) {
+  if (!cards[key]) return;
   const c = cards[key];
   $('.meter i', c.el).style.width = (v / 255 * 100) + '%';
   $('.val', c.el).textContent = v;
