@@ -163,8 +163,8 @@ app.routes.customer = (a) => { scenes.reset(createCustomerScene(a)); return true
 
 // ?scene=race 或 ?scene=race:賽道id：直接開一場賽車（自由遊玩）
 app.routes.race = (a, arg) => createRaceScene(a, { track: TRACKS[arg] ? arg : 'itamae', level: 3 });
-// ?scene=pachinko 或 ?scene=pachinko:檯面id：直接開一局小鋼珠（釘子設定 3）
-app.routes.pachinko = (a, arg) => createPachinkoScene(a, { board: BOARDS[arg] ? arg : 'itamae', setting: 3 });
+// ?scene=pachinko 或 ?scene=pachinko:機種id：直接開一局小鋼珠（釘子設定 3）
+app.routes.pachinko = (a, arg) => createPachinkoScene(a, { board: BOARDS[arg] ? arg : 'ryujin', setting: 3 });
 
 app.input = createInput(canvas, W, H, (evt) => scenes.input(evt));
 

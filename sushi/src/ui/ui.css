@@ -429,52 +429,83 @@ button {
 .race-result .menu-title { text-align: center; }
 
 /* ---- 小鋼珠 ---- */
+/* 版面：左邊是出玉換壽司的表，中間是正方形的盤面（自己的高解析度畫布），右邊是出玉、力道和按鈕。 */
 .pk-left {
-  position: absolute; left: 0.8%; top: 2%; width: 29.5%; bottom: 12%; padding: 0.5em 0.6em; font-size: 0.82em;
+  position: absolute; left: 0.8%; top: 2%; width: 21.5%; bottom: 2%; padding: 0.5em 0.6em; font-size: 0.8em;
   display: flex; flex-direction: column; gap: 0.25em; overflow: hidden;
 }
-.pk-title { font-weight: 900; font-size: 1.1em; }
-.pk-title small { font-weight: 400; color: var(--ink-soft); }
-.pk-head { font-weight: 700; color: var(--red-dark); border-bottom: 1px dashed var(--washi-dark); }
-.pk-prize { display: flex; align-items: center; gap: 0.35em; }
-.pk-prize .px-icon { width: 1.8em; height: auto; }
-.pk-prize-name { flex: 1; }
-.pk-prize-n { font-weight: 700; }
+.pk-title { font-weight: 900; font-size: 1.15em; }
+.pk-sub { color: var(--ink-soft); font-size: 0.92em; }
+.pk-head { font-weight: 700; color: var(--red-dark); border-bottom: 1px dashed var(--washi-dark); margin-top: 0.2em; }
+.pk-prize { display: flex; align-items: center; gap: 0.3em; }
+.pk-prize .px-icon { width: 1.7em; height: auto; }
+.pk-prize-name { flex: 1; white-space: nowrap; }
+.pk-prize-cost { color: var(--ink-soft); font-size: 0.85em; white-space: nowrap; }
+.pk-prize-n { font-weight: 700; min-width: 2.2em; text-align: right; }
 .pk-total { margin-top: auto; font-weight: 700; }
 .pk-total .num { font-size: 1.2em; color: var(--red-dark); }
 .pk-target { font-weight: 700; color: var(--indigo); }
 .pk-bar { height: 0.6em; background: var(--washi-dark); border-radius: 0.3em; overflow: hidden; }
 .pk-bar-fill { height: 100%; width: 0; background: var(--gold); }
 .pk-bar-fill.beat { background: var(--green); }
-.pk-right {
-  position: absolute; left: 69.4%; right: 0.8%; top: 2%; bottom: 12%;
-  display: flex; flex-direction: column; gap: 0.3em; font-size: 0.82em;
+.pk-board {
+  position: absolute; top: 2%; height: 96%; aspect-ratio: 1 / 1; left: 50%; transform: translateX(-50%);
+  border-radius: 0.6em; box-shadow: 0 0 0 2px #000, 0 0.4em 1.2em rgba(0, 0, 0, 0.6);
 }
-.pk-top { flex: 1; padding: 0.4em 0.5em; display: flex; flex-direction: column; gap: 0.2em; }
-.pk-balls { font-weight: 700; }
-.pk-balls .num { font-size: 1.3em; color: var(--red-dark); }
-.pk-reels { display: flex; justify-content: center; gap: 0.3em; background: #17110c; border-radius: 0.4em; padding: 0.25em; position: relative; }
-.pk-reels .px-icon { width: 2.6em; height: auto; background: #f6ecd4; border-radius: 0.2em; }
-.pk-reels.held::after { content: attr(data-hold); position: absolute; right: 0.3em; top: 0.1em; color: #ffe08a; font-weight: 700; font-size: 0.8em; }
-.pk-reel-msg { text-align: center; min-height: 1.2em; font-weight: 700; }
-.pk-reel-msg.win { color: var(--red); }
-.pk-feedback { font-size: 0.92em; color: var(--indigo); min-height: 2.4em; }
-.pk-gauge { flex: 0 0 5.5em; }
+.pk-toast {
+  position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); max-width: 50%; text-align: center;
+  background: rgba(16, 10, 6, 0.9); color: var(--washi); border: 1px solid var(--gold); border-radius: 999px;
+  padding: 0.3em 1em; font-size: 0.85em; pointer-events: none;
+}
+.pk-right {
+  position: absolute; left: 77.7%; right: 0.8%; top: 2%; bottom: 2%;
+  display: flex; flex-direction: column; gap: 0.3em; font-size: 0.8em;
+}
+.pk-top { flex: 1; padding: 0.4em 0.5em; display: flex; flex-direction: column; gap: 0.35em; min-height: 0; }
+.pk-count { display: flex; gap: 0.4em; }
+.pk-count > div { flex: 1; display: flex; flex-direction: column; line-height: 1.1; }
+.pk-count small { color: var(--ink-soft); }
+.pk-count b { font-size: 1.6em; color: var(--ink); }
+.pk-count b.won { color: var(--red-dark); }
+.pk-mode { display: flex; flex-direction: column; gap: 0.2em; }
+.pk-badge { align-self: flex-start; font-weight: 900; padding: 0 0.6em; border-radius: 999px; background: var(--washi-dark); }
+.pk-badge.hot { background: var(--red); color: #fff; animation: pk-pulse 0.6s infinite alternate; }
+@keyframes pk-pulse { to { filter: brightness(1.3); } }
+.pk-big { font-weight: 700; }
+.pk-guide { margin: auto 0 0; padding-left: 1.2em; font-size: 0.88em; color: var(--ink-soft); display: flex; flex-direction: column; gap: 0.15em; }
+.narrow .pk-guide { display: none; }
 .pk-power { color: var(--washi); font-weight: 700; text-align: center; text-shadow: 0 1px 0 #000; }
+.pk-track {
+  position: relative; height: 2.4em; min-height: 32px; border-radius: 0.4em; background: #120c08; border: 1px solid #b98552;
+  touch-action: none; cursor: ew-resize; overflow: hidden;
+}
+.pk-zone { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.pk-zone.foul { background: repeating-linear-gradient(45deg, #3a2a2f, #3a2a2f 4px, #241a1e 4px, #241a1e 8px); color: #a99; }
+.pk-zone.left { background: rgba(55, 214, 122, 0.3); color: #c8ffe0; }
+.pk-zone.right { background: rgba(255, 207, 74, 0.25); color: #ffe9a8; }
+.pk-zone.want { background: rgba(255, 207, 74, 0.6); animation: pk-pulse 0.5s infinite alternate; }
+.pk-thumb { position: absolute; top: -1px; bottom: -1px; width: 5px; margin-left: -2.5px; background: #fff; border-radius: 3px; box-shadow: 0 0 6px #fff; pointer-events: none; }
 .pk-ctl { display: flex; gap: 0.3em; justify-content: center; }
-.pk-ctl .btn { flex: 1; padding-left: 0.2em; padding-right: 0.2em; }
+.pk-ctl .btn { flex: 1; min-width: 0; padding-left: 0.2em; padding-right: 0.2em; }
 .pk-fire { flex: 2 !important; }
-.pk-btn.active { background: var(--gold); }
-.pk-hint { position: absolute; left: 0; right: 0; bottom: 0.4em; text-align: center; font-size: 0.72em; color: rgba(255, 244, 220, 0.85); text-shadow: 0 1px 0 #000; }
+.pk-btn.on { background: var(--gold); }
+.pk-btn.active { background: var(--green); color: #fff; }
+.pk-hint { position: absolute; left: 23%; right: 23%; bottom: -0.1em; text-align: center; font-size: 0.66em; color: rgba(255, 244, 220, 0.8); text-shadow: 0 1px 0 #000; pointer-events: none; }
 .narrow .pk-hint { display: none; }
-@media (pointer: coarse) { .pk-hint { display: none; } .pk-btn { min-height: 40px; } }
+@media (pointer: coarse) { .pk-hint { display: none; } .pk-btn { min-height: 40px; } .pk-track { min-height: 40px; } }
 .narrow .pk-btn { min-height: 40px; }
-.narrow .pk-left, .narrow .pk-right { bottom: 2%; }
+.narrow .pk-track { min-height: 40px; }
+.narrow .pk-left .pk-prize-cost { display: none; }
+.narrow .pk-board { top: 6%; height: 88%; }
+.narrow .pk-left { width: 23.6%; }
+.narrow .pk-right { left: 75.6%; }
+.narrow [data-id="pk-fminus"], .narrow [data-id="pk-fplus"] { display: none; }
 .pk-result { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 46%; text-align: left; }
 .pk-result .menu-title { text-align: center; }
 .pk-verdict { text-align: center; font-weight: 900; font-size: 1.2em; margin-top: 0.4em; }
 .pk-verdict.win { color: var(--green); }
 .pk-verdict.lose { color: var(--red); }
+@media (prefers-reduced-motion: reduce) { .pk-badge.hot, .pk-zone.want { animation: none; } }
 
 /* ---- 機台（設施分頁、強敵選單） ---- */
 .mach-row .row-main { width: 100%; }

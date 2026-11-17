@@ -1,28 +1,40 @@
-// 小鋼珠：用鍵盤調力道並發射 30 顆，看到結算。也測經營畫面的試玩、設施分頁、職業玩家的對策選單。
+// 小鋼珠（數位機）：用鍵盤調力道、空白鍵發射，打完 125 顆看到結算。強制大當看右打和アタッカー。
+// 也測經營畫面的試玩、設施分頁、職業玩家的對策選單。
 import { runE2E, waitScene, DESKTOP, PHONE } from '../e2e-util.mjs';
 
 await runE2E('pachinko', async ({ open, check, shot }) => {
   // 1. 自由遊玩：鍵盤操作
   const page = await open(DESKTOP, '?debug=1&seed=1&scene=pachinko&speed=4');
   await waitScene(page, 'pachinko');
-  check(await page.locator('.pk-left').isVisible(), '看得到獎品表');
+  check(await page.locator('.pk-left').isVisible(), '看得到出玉換壽司的表');
+  check(await page.locator('.pk-board').isVisible(), '看得到盤面');
   const p0 = (await page.evaluate(() => window.__sushi.mini())).power;
   for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
   await page.keyboard.down('Shift');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.up('Shift');
   const p1 = (await page.evaluate(() => window.__sushi.mini())).power;
-  check(Math.abs(p1 - p0 - 0.041) < 1e-6, `→ 一次 0.005、Shift+→ 一次 0.001（${p0.toFixed(3)} → ${p1.toFixed(3)}）`);
-  await page.keyboard.down('Space');
-  await page.waitForFunction(() => window.__sushi.mini().left === 0, null, { timeout: 20000 });
-  await page.keyboard.up('Space');
-  check(true, '按住空白鍵把 30 顆射完');
+  check(Math.abs(p1 - p0 - 0.082) < 1e-6, `→ 一次 0.01、Shift+→ 一次 0.002（${p0.toFixed(3)} → ${p1.toFixed(3)}）`);
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowLeft');
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.up('Shift');
+  await page.keyboard.press('Space');
+  await page.waitForFunction(() => window.__sushi.mini().left < 120, null, { timeout: 10000 });
+  check(true, '按空白鍵開始連發');
+  // 強制大當：右打、アタッカー打開
+  await page.evaluate(() => window.__sushi.app.scenes.top().debug.win());
+  await page.waitForFunction(() => window.__sushi.mini().phase === 'jp', null, { timeout: 30000 });
+  await page.evaluate(() => window.__sushi.app.scenes.top().debug.step(120 * 8));
+  const jp = await page.evaluate(() => window.__sushi.mini());
+  check(jp.phase === 'jp' && jp.won > 0, `大當中，自動右打進アタッカー（出玉 ${jp.won}）`);
+  await shot(page, 'p4-pachinko.png');
+  await page.evaluate(() => window.__sushi.app.scenes.top().debug.step(120 * 600));
   await page.waitForSelector('.pk-result:not(.hidden)', { timeout: 20000 });
   const m = await page.evaluate(() => window.__sushi.mini());
-  const n = Object.values(m.counts).reduce((a, b) => a + b, 0);
-  check(m.over && m.result, `看到結算（贏到 ¥${m.value}，入賞和滾輪 ${n} 次）`);
-  check(n > 5, '力道調在甜蜜點附近時，有不少彈珠進洞');
-  await shot(page, 'p4-pachinko.png');
+  const n = Object.values(m.result.counts).reduce((a, b) => a + b, 0);
+  check(m.over && m.result && m.left === 0, `打完 125 顆看到結算（出玉 ${m.result.balls} 顆，換到 ${n} 樣，¥${m.result.value}）`);
+  check(m.result.jackpots >= 1 && m.result.value > 0, '大當的出玉換成了壽司');
   await page.click('[data-id="pk-done"]');
   await waitScene(page, 'menu');
   check(true, '結束後可以離開');
@@ -71,8 +83,8 @@ await runE2E('pachinko', async ({ open, check, shot }) => {
   const fire = await phone.locator('[data-id="pk-fire"]').boundingBox();
   await phone.mouse.move(fire.x + fire.width / 2, fire.y + fire.height / 2);
   await phone.mouse.down();
-  await phone.waitForTimeout(1500);
   await phone.mouse.up();
-  check((await phone.evaluate(() => window.__sushi.mini().left)) < 30, '按住發射鈕會發射');
+  await phone.waitForTimeout(1500);
+  check((await phone.evaluate(() => window.__sushi.mini().left)) < 125, '按發射鈕會連發');
   await shot(phone, 'p4-pachinko-phone.png');
 });

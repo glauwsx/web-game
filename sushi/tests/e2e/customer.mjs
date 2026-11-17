@@ -18,7 +18,7 @@ await runE2E('customer', async ({ open, check, shot }) => {
   await page.click('[data-id="play-pachinko"]');
   await waitScene(page, 'pachinko');
   check((await page.evaluate(() => window.__sushi.mini().setting)) === 3, '零用錢挑戰的釘子設定固定是 3');
-  await page.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.5); d.hold(true); d.step(120 * 40); });
+  await page.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.4); d.hold(true); d.step(120 * 600); });
   await page.waitForSelector('.pk-result:not(.hidden)');
   const value = await page.evaluate(() => window.__sushi.mini().value);
   await page.click('[data-id="pk-done"]');
@@ -59,12 +59,12 @@ await runE2E('customer', async ({ open, check, shot }) => {
   await page.click('[data-id="play-pachinko"]');
   await waitScene(page, 'pachinko');
   check((await page.evaluate(() => window.__sushi.mini().setting)) === 5, '自由遊玩選「鬆」是釘子設定 5');
-  await page.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.5); d.hold(true); d.step(120 * 40); });
+  await page.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.4); d.hold(true); d.step(120 * 600); });
   await page.waitForSelector('.pk-result:not(.hidden)');
   await page.click('[data-id="pk-done"]');
   await waitScene(page, 'customer');
   const best = await page.evaluate(() => window.__sushi.state().save.best);
-  check(best['pk:itamae:5'] !== undefined, `自由遊玩記錄最佳成績（¥${best['pk:itamae:5'].value}）`);
+  check(best['pk:ryujin:5'] !== undefined, `自由遊玩記錄最佳成績（¥${best['pk:ryujin:5'].value}）`);
   await page.click('[data-id="level-shumaha"]');
   await page.click('[data-id="play-race"]');
   await waitScene(page, 'race');

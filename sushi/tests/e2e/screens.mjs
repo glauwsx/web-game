@@ -40,7 +40,7 @@ const SCREENS = [
     await waitScene(p, 'results');
   }],
   ['14-pachinko', '?debug=1&seed=1&scene=pachinko', async (p) => {
-    await p.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.5); d.hold(true); d.step(120 * 3); d.hold(false); });
+    await p.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.setPower(0.4); d.hold(true); d.step(120 * 12); d.hold(false); });
   }],
   ['15-race', '?debug=1&seed=1&scene=race:shoyu', async (p) => {
     await p.evaluate(() => { const d = window.__sushi.app.scenes.top().debug; d.auto(true); d.step(60 * 20); });
